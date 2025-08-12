@@ -35,11 +35,11 @@ export function ThemeSwitcher({ onModeChange }: { onModeChange?: (mode: "dark" |
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Paintbrush className="h-4 w-4 mr-2" /> Theme
+        <Button variant="outline" size="icon" aria-label="Change theme">
+          <Paintbrush className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-48 z-50">
         <DropdownMenuLabel>Theme</DropdownMenuLabel>
         {THEMES.map((t) => (
           <DropdownMenuItem key={t.key} onClick={() => applyTheme(t.key)}>

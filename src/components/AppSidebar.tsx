@@ -9,10 +9,11 @@ export type AppSidebarProps = {
   onOpenFile: (file: FileLeaf) => void;
   onRename: (id: string, currentName: string) => void;
   onDelete: (id: string) => void;
+  onMove: (sourceId: string, targetId: string, position: "inside" | "before" | "after") => void;
   selectedId?: string | null;
 };
 
-export function AppSidebar({ tree, onCreateFile, onCreateFolder, onOpenFile, onRename, onDelete, selectedId }: AppSidebarProps) {
+export function AppSidebar({ tree, onCreateFile, onCreateFolder, onOpenFile, onRename, onDelete, onMove, selectedId }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
@@ -23,6 +24,7 @@ export function AppSidebar({ tree, onCreateFile, onCreateFolder, onOpenFile, onR
           onOpenFile={onOpenFile}
           onRename={onRename}
           onDelete={onDelete}
+          onMove={onMove}
           selectedId={selectedId}
         />
       </SidebarContent>

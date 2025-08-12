@@ -3,6 +3,8 @@ import Editor, { BeforeMount, OnMount } from "@monaco-editor/react";
 import type * as monacoTypes from "monaco-editor";
 import { FileLeaf } from "@/lib/fs";
 
+let skriptCompletionRegistered = false;
+
 export type EditorPaneProps = {
   file: FileLeaf | null;
   onChange: (value: string) => void;
@@ -37,6 +39,49 @@ export function EditorPane({ file, onChange, themeKey, onCursorChange }: EditorP
           ],
         },
       } as any);
+    }
+
+    if (!skriptCompletionRegistered) {
+      skriptCompletionRegistered = true;
+      const keywords = [
+        "command", "trigger", "if", "else", "loop", "set", "to", "send", "message", "player", "event", "function", "return", "stop",
+      ];
+      const snippets = [
+        {
+          label: "command",
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: 'command /${1:name}:\n  trigger:\n    message "${2:text}"',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: "Skript command template",
+        },
+        {
+          label: "if",
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: 'if ${1:condition}:\n  ${2:action}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: "If statement",
+        },
+      ];
+      monaco.languages.registerCompletionItemProvider("skript", {
+        triggerCharacters: ["/", " ", "\n"],
+        provideCompletionItems: (model, position) => {
+          const word = model.getWordUntilPosition(position);
+          const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: word.startColumn,
+            endColumn: word.endColumn,
+          };
+          const keywordSuggestions = keywords.map((k) => ({
+            label: k,
+            kind: monaco.languages.CompletionItemKind.Keyword,
+            insertText: k,
+            range,
+          }));
+          const snippetSuggestions = snippets.map((s) => ({ ...s, range }));
+          return { suggestions: [...snippetSuggestions, ...keywordSuggestions] };
+        },
+      });
     }
 
     monaco.editor.defineTheme("skriptpanda-dark", {

@@ -86,25 +86,66 @@ export function removeNode(root: FileTree, removeId: string): FileTree {
   return clone;
 }
 
-export function renameNode(root: FileTree, id: string, newName: string): FileTree {
-  const clone = structuredClone(root) as FileTree;
-  function walk(node: FileNode) {
-    if (node.id === id) {
-      node.name = newName;
-      return;
-    }
-    if (isFolder(node)) node.children.forEach(walk);
+export type MovePosition = "inside" | "before" | "after";
+
+function findParentAndIndex(root: FolderNode, id: string): { parent: FolderNode; index: number } | null {
+  if (root.children.some((c) => c.id === id)) {
+    return { parent: root, index: root.children.findIndex((c) => c.id === id) };
   }
-  walk(clone);
+  for (const child of root.children) {
+    if (isFolder(child)) {
+      const res = findParentAndIndex(child, id);
+      if (res) return res;
+    }
+  }
+  return null;
+}
+
+function isDescendant(root: FileNode, ancestorId: string, nodeId: string): boolean {
+  const ancestor = findNode(root, ancestorId);
+  if (!ancestor || !isFolder(ancestor)) return false;
+  function walk(n: FileNode): boolean {
+    if (n.id === nodeId) return true;
+    if (isFolder(n)) return n.children.some(walk);
+    return false;
+  }
+  return ancestor.children.some(walk);
+}
+
+export function moveNode(root: FileTree, sourceId: string, targetId: string, position: MovePosition): FileTree {
+  if (sourceId === targetId) return root;
+  const clone = structuredClone(root) as FileTree;
+
+  const srcInfo = findParentAndIndex(clone, sourceId);
+  const targetNode = findNode(clone, targetId);
+  if (!srcInfo || !targetNode) return clone;
+
+  // prevent moving a node inside its own descendant
+  if (isDescendant(clone, sourceId, targetId)) return clone;
+
+  const sourceNode = srcInfo.parent.children[srcInfo.index];
+  // remove from previous location
+  srcInfo.parent.children.splice(srcInfo.index, 1);
+
+  if (position === "inside" && isFolder(targetNode)) {
+    targetNode.children.push(sourceNode);
+    return clone;
+  }
+
+  // Insert before/after target within its parent
+  const targetParentInfo = findParentAndIndex(clone, targetId);
+  if (!targetParentInfo) return clone;
+  let insertIndex = targetParentInfo.index + (position === "after" ? 1 : 0);
+
+  // If moving within the same parent and source was before target, account for index shift
+  if (targetParentInfo.parent.id === srcInfo.parent.id && srcInfo.index < targetParentInfo.index) {
+    insertIndex -= 1;
+  }
+  targetParentInfo.parent.children.splice(insertIndex, 0, sourceNode);
   return clone;
 }
 
-export const DEFAULT_TREE: FileTree = createFolder("workspace", [
-  createFolder("scripts", [
-    createFile("hello.sk", "command /hello:\n  trigger:\n    message \"Hello from SkriptPanda!\""),
-  ]),
-  createFile("README.md", "# SkriptPanda Workspace\n\nWelcome! Create .sk files and export as zip."),
-]);
+...
 
 export const STORAGE_KEY = "skriptpanda.fs";
 

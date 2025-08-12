@@ -4,7 +4,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { EditorPane } from "@/components/editor/EditorPane";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
-import { Plus, FolderPlus, Download, X } from "lucide-react";
+import { Download, X } from "lucide-react";
 import {
   FileLeaf,
   FileNode,
@@ -18,8 +18,12 @@ import {
   renameNode,
   saveTree,
   updateFileContent,
+  moveNode,
 } from "@/lib/fs";
 import { exportTreeAsZip } from "@/lib/zip";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 
 const Index = () => {
   const [tree, setTree] = useState<FileTree>(() => loadTree());
@@ -27,6 +31,11 @@ const Index = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [mode, setMode] = useState<"dark" | "light">("dark");
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
+
+  // Dialog states
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [renameState, setRenameState] = useState<{ id: string; name: string } | null>(null);
+  const [createState, setCreateState] = useState<{ parentId: string; type: "file" | "folder"; name: string } | null>(null);
 
   useEffect(() => {
     saveTree(tree);
@@ -43,25 +52,16 @@ const Index = () => {
   };
 
   const createIn = (parentId: string, folder: boolean) => {
-    const name = folder ? prompt("Folder name", "new-folder") : prompt("File name", "new-file.sk");
-    if (!name) return;
-    const node = folder ? createFolder(name) : createFile(name, folder ? "" : "# New Skript file\n");
-    setTree((t) => addChild(t, parentId, node));
+    const defaultName = folder ? "new-folder" : "new-file.sk";
+    setCreateState({ parentId, type: folder ? "folder" : "file", name: defaultName });
   };
 
   const handleRename = (id: string, current: string) => {
-    const name = prompt("Rename to", current);
-    if (!name) return;
-    setTree((t) => renameNode(t, id, name));
-    // Update opened tabs names if needed
-    setOpenTabs((tabs) => tabs.map((tab) => (tab.id === id ? { ...tab, name } : tab)));
+    setRenameState({ id, name: current });
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm("Delete item?")) return;
-    setTree((t) => removeNode(t, id));
-    setOpenTabs((tabs) => tabs.filter((t) => t.id !== id));
-    if (activeId === id) setActiveId(null);
+    setConfirmDelete(id);
   };
 
   const handleChange = (value: string) => {
@@ -112,6 +112,7 @@ const Index = () => {
           onOpenFile={handleOpenFile}
           onRename={handleRename}
           onDelete={handleDelete}
+          onMove={(sourceId, targetId, position) => setTree((t) => moveNode(t, sourceId, targetId, position))}
           selectedId={activeId}
         />
         <SidebarInset>
@@ -124,12 +125,6 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => createIn(tree.id, false)}>
-                <Plus className="h-4 w-4 mr-1" /> New File
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => createIn(tree.id, true)}>
-                <FolderPlus className="h-4 w-4 mr-1" /> New Folder
-              </Button>
               <Button size="sm" variant="default" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-1" /> Export Zip
               </Button>
@@ -165,6 +160,96 @@ const Index = () => {
           </footer>
         </SidebarInset>
       </div>
+
+      {/* Create Dialog */}
+      <Dialog open={!!createState} onOpenChange={(o) => !o && setCreateState(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{createState?.type === "folder" ? "New Folder" : "New File"}</DialogTitle>
+            <DialogDescription>Enter a name for the {createState?.type}.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              autoFocus
+              value={createState?.name ?? ""}
+              onChange={(e) => setCreateState((s) => (s ? { ...s, name: e.target.value } : s))}
+              placeholder={createState?.type === "folder" ? "new-folder" : "new-file.sk"}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateState(null)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!createState) return;
+                const { parentId, type, name } = createState;
+                if (!name.trim()) return;
+                const node = type === "folder" ? createFolder(name) : createFile(name, type === "file" ? "# New Skript file\n" : "");
+                setTree((t) => addChild(t, parentId, node));
+                setCreateState(null);
+              }}
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Dialog */}
+      <Dialog open={!!renameState} onOpenChange={(o) => !o && setRenameState(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename</DialogTitle>
+            <DialogDescription>Enter a new name.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              autoFocus
+              value={renameState?.name ?? ""}
+              onChange={(e) => setRenameState((s) => (s ? { ...s, name: e.target.value } : s))}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameState(null)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!renameState) return;
+                const { id, name } = renameState;
+                if (!name.trim()) return;
+                setTree((t) => renameNode(t, id, name));
+                setOpenTabs((tabs) => tabs.map((tab) => (tab.id === id ? { ...tab, name } : tab)));
+                setRenameState(null);
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm */}
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete item?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!confirmDelete) return;
+                const id = confirmDelete;
+                setTree((t) => removeNode(t, id));
+                setOpenTabs((tabs) => tabs.filter((t) => t.id !== id));
+                if (activeId === id) setActiveId(null);
+                setConfirmDelete(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarProvider>
   );
 };
