@@ -2,9 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
+   All colors MUST be HSL. */
 
 @layer base {
   :root {
@@ -39,20 +38,19 @@ All colors MUST be HSL.
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* SkriptPanda brand tokens */
+    --brand-orange: 33 100% 50%; /* #ff9800 */
+    --code-font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --gradient-hero: linear-gradient(120deg, hsl(var(--background)), hsl(var(--background)) 50%, hsl(var(--accent) / 0.25));
+    --shadow-glow: 0 10px 30px -10px hsl(var(--brand-orange) / 0.35);
   }
 
   .dark {
@@ -83,6 +81,7 @@ All colors MUST be HSL.
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -92,14 +91,129 @@ All colors MUST be HSL.
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-}
 
-@layer base {
-  * {
-    @apply border-border;
+  /* Themed variants */
+  .theme-sp-dark {
+    --background: 230 50% 6%;
+    --foreground: 210 40% 96%;
+    --card: 230 50% 7%;
+    --card-foreground: 210 40% 96%;
+    --popover: 230 50% 6%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 222 70% 60%;
+    --primary-foreground: 222 100% 12%;
+    --secondary: 230 35% 14%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 230 35% 14%;
+    --muted-foreground: 220 15% 70%;
+    --accent: var(--brand-orange);
+    --accent-foreground: 230 40% 10%;
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 230 30% 18%;
+    --input: 230 30% 18%;
+    --ring: var(--brand-orange);
+    --sidebar-background: 230 45% 8%;
+    --sidebar-foreground: 220 15% 80%;
+    --sidebar-primary: var(--brand-orange);
+    --sidebar-primary-foreground: 230 40% 10%;
+    --sidebar-accent: 230 35% 16%;
+    --sidebar-accent-foreground: 220 15% 90%;
+    --sidebar-border: 230 30% 18%;
+    --sidebar-ring: var(--brand-orange);
   }
 
-  body {
-    @apply bg-background text-foreground;
+  .theme-sp-light {
+    --background: 210 25% 98%;
+    --foreground: 220 25% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 65% 35%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 95%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 95%;
+    --muted-foreground: 215 16% 46%;
+    --accent: var(--brand-orange);
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: var(--brand-orange);
+    --sidebar-background: 210 25% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 222 65% 35%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 95%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: var(--brand-orange);
   }
+
+  .theme-dracula {
+    --background: 231 15% 15%;
+    --foreground: 60 30% 96%;
+    --card: 231 15% 16%;
+    --card-foreground: 60 30% 96%;
+    --popover: 231 15% 16%;
+    --popover-foreground: 60 30% 96%;
+    --primary: 265 89% 78%;
+    --primary-foreground: 231 15% 16%;
+    --secondary: 231 15% 20%;
+    --secondary-foreground: 60 30% 96%;
+    --muted: 231 15% 20%;
+    --muted-foreground: 240 10% 70%;
+    --accent: var(--brand-orange);
+    --accent-foreground: 231 15% 16%;
+    --destructive: 0 75% 58%;
+    --destructive-foreground: 60 30% 96%;
+    --border: 231 15% 22%;
+    --input: 231 15% 22%;
+    --ring: 265 89% 78%;
+    --sidebar-background: 231 15% 16%;
+    --sidebar-foreground: 60 30% 92%;
+    --sidebar-primary: 265 89% 78%;
+    --sidebar-primary-foreground: 231 15% 16%;
+    --sidebar-accent: 231 15% 20%;
+    --sidebar-accent-foreground: 60 30% 96%;
+    --sidebar-border: 231 15% 22%;
+    --sidebar-ring: 265 89% 78%;
+  }
+
+  .theme-solarized {
+    --background: 44 87% 94%;
+    --foreground: 195 15% 20%;
+    --card: 44 87% 95%;
+    --card-foreground: 195 15% 20%;
+    --popover: 44 87% 95%;
+    --popover-foreground: 195 15% 20%;
+    --primary: 195 50% 30%;
+    --primary-foreground: 44 87% 94%;
+    --secondary: 44 60% 88%;
+    --secondary-foreground: 195 15% 20%;
+    --muted: 44 60% 88%;
+    --muted-foreground: 195 10% 35%;
+    --accent: var(--brand-orange);
+    --accent-foreground: 44 87% 94%;
+    --destructive: 7 71% 52%;
+    --destructive-foreground: 44 87% 94%;
+    --border: 44 35% 85%;
+    --input: 44 35% 85%;
+    --ring: 195 50% 30%;
+    --sidebar-background: 44 87% 94%;
+    --sidebar-foreground: 195 15% 20%;
+    --sidebar-primary: 195 50% 30%;
+    --sidebar-primary-foreground: 44 87% 94%;
+    --sidebar-accent: 44 60% 88%;
+    --sidebar-accent-foreground: 195 15% 20%;
+    --sidebar-border: 44 35% 85%;
+    --sidebar-ring: 195 50% 30%;
+  }
+
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+  code, pre, .monaco-editor { font-family: var(--code-font); }
 }
