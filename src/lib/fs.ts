@@ -145,7 +145,27 @@ export function moveNode(root: FileTree, sourceId: string, targetId: string, pos
   return clone;
 }
 
-...
+
+
+export function renameNode(root: FileTree, id: string, newName: string): FileTree {
+  const clone = structuredClone(root) as FileTree;
+  function walk(node: FileNode) {
+    if (node.id === id) {
+      node.name = newName;
+      return;
+    }
+    if (isFolder(node)) node.children.forEach(walk);
+  }
+  walk(clone);
+  return clone;
+}
+
+export const DEFAULT_TREE: FileTree = createFolder("SkriptPanda", [
+  createFolder("scripts", [
+    createFile("example.sk", "# Example Skript file\n\n# Start writing your Skript here.\n"),
+  ]),
+  createFile("README.md", "# SkriptPanda.\n\nWelcome to SkriptPanda IDE."),
+]);
 
 export const STORAGE_KEY = "skriptpanda.fs";
 

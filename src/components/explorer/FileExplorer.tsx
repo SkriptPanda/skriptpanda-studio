@@ -29,6 +29,7 @@ function NodeRow({
   onCreateFolder,
   onRename,
   onDelete,
+  onMove,
   selectedId,
 }: {
   node: FileNode;
@@ -109,6 +110,7 @@ function NodeRow({
                 onCreateFolder={onCreateFolder}
                 onRename={onRename}
                 onDelete={onDelete}
+                onMove={onMove}
                 selectedId={selectedId}
               />
             ))}
