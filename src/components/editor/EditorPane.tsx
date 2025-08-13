@@ -8,9 +8,19 @@ let skriptCompletionRegistered = false;
 export type EditorPaneProps = {
   file: FileLeaf | null;
   onChange: (value: string) => void;
-  themeKey: "dark" | "light";
+  themeKey: string;
   onCursorChange?: (pos: { line: number; column: number }) => void;
 };
+
+function getMonacoTheme(themeKey: string) {
+  switch (themeKey) {
+    case "sp-dark": return "skriptpanda-dark";
+    case "sp-light": return "skriptpanda-light";
+    case "dracula": return "dracula";
+    case "solarized": return "solarized-light";
+    default: return "skriptpanda-dark";
+  }
+}
 
 export function EditorPane({ file, onChange, themeKey, onCursorChange }: EditorPaneProps) {
   const monacoRef = useRef<monacoTypes.editor.IStandaloneCodeEditor | null>(null);
@@ -173,10 +183,12 @@ export function EditorPane({ file, onChange, themeKey, onCursorChange }: EditorP
       inherit: true,
       rules: [
         { token: "keyword", foreground: "ff9800" },
+        { token: "event", foreground: "7aa2f7" },
         { token: "type", foreground: "7aa2f7" },
         { token: "string", foreground: "9cdcfe" },
         { token: "comment", foreground: "6a9955" },
         { token: "number", foreground: "b5cea8" },
+        { token: "colon", foreground: "ff9800" },
       ],
       colors: {
         "editor.background": "#0b1020",
@@ -189,9 +201,61 @@ export function EditorPane({ file, onChange, themeKey, onCursorChange }: EditorP
     monaco.editor.defineTheme("skriptpanda-light", {
       base: "vs",
       inherit: true,
-      rules: [{ token: "keyword", foreground: "d97706" }],
+      rules: [
+        { token: "keyword", foreground: "d97706" },
+        { token: "event", foreground: "0f4c75" },
+        { token: "type", foreground: "0f4c75" },
+        { token: "string", foreground: "059669" },
+        { token: "comment", foreground: "6b7280" },
+        { token: "number", foreground: "7c3aed" },
+        { token: "colon", foreground: "ff9800" },
+      ],
       colors: {
         "editorCursor.foreground": "#ff9800",
+        "editor.background": "#fefefe",
+        "editorLineNumber.foreground": "#9ca3af",
+      },
+    });
+
+    monaco.editor.defineTheme("dracula", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [
+        { token: "keyword", foreground: "ff79c6" }, // Pink
+        { token: "event", foreground: "8be9fd" }, // Cyan
+        { token: "type", foreground: "8be9fd" }, // Cyan
+        { token: "string", foreground: "f1fa8c" }, // Yellow
+        { token: "comment", foreground: "6272a4" }, // Purple-gray
+        { token: "number", foreground: "bd93f9" }, // Purple
+        { token: "colon", foreground: "ff79c6" }, // Pink
+      ],
+      colors: {
+        "editor.background": "#282a36",
+        "editorLineNumber.foreground": "#6272a4",
+        "editorCursor.foreground": "#f8f8f2",
+        "editor.selectionBackground": "#44475a",
+        "editor.foreground": "#f8f8f2",
+      },
+    });
+
+    monaco.editor.defineTheme("solarized-light", {
+      base: "vs",
+      inherit: true,
+      rules: [
+        { token: "keyword", foreground: "859900" }, // Green
+        { token: "event", foreground: "268bd2" }, // Blue
+        { token: "type", foreground: "268bd2" }, // Blue
+        { token: "string", foreground: "2aa198" }, // Cyan
+        { token: "comment", foreground: "93a1a1" }, // Base1
+        { token: "number", foreground: "d33682" }, // Magenta
+        { token: "colon", foreground: "cb4b16" }, // Orange
+      ],
+      colors: {
+        "editor.background": "#fdf6e3",
+        "editorLineNumber.foreground": "#93a1a1",
+        "editorCursor.foreground": "#657b83",
+        "editor.selectionBackground": "#eee8d5",
+        "editor.foreground": "#657b83",
       },
     });
   };
@@ -229,7 +293,7 @@ export function EditorPane({ file, onChange, themeKey, onCursorChange }: EditorP
           scrollBeyondLastLine: false,
           automaticLayout: true,
         }}
-        theme={themeKey === "dark" ? "skriptpanda-dark" : "skriptpanda-light"}
+        theme={getMonacoTheme(themeKey)}
       />
     </div>
   );

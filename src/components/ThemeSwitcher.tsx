@@ -12,7 +12,7 @@ const THEMES = [
 
 const STORAGE_KEY = "skriptpanda.theme";
 
-export function ThemeSwitcher({ onModeChange }: { onModeChange?: (mode: "dark" | "light") => void }) {
+export function ThemeSwitcher({ onModeChange }: { onModeChange?: (mode: string) => void }) {
   const [theme, setTheme] = useState<string>(() => localStorage.getItem(STORAGE_KEY) || "sp-dark");
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export function ThemeSwitcher({ onModeChange }: { onModeChange?: (mode: "dark" |
     if (t.dark) document.body.classList.add("dark");
     localStorage.setItem(STORAGE_KEY, key);
     setTheme(key);
-    onModeChange?.(t.dark ? "dark" : "light");
+    onModeChange?.(key);
   }
 
   return (

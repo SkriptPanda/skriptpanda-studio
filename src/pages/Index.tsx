@@ -29,7 +29,7 @@ const Index = () => {
   const [tree, setTree] = useState<FileTree>(() => loadTree());
   const [openTabs, setOpenTabs] = useState<FileLeaf[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [mode, setMode] = useState<"dark" | "light">("dark");
+  const [mode, setMode] = useState<string>("sp-dark");
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
 
   // Dialog states
