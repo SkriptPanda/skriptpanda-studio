@@ -30,36 +30,120 @@ export function EditorPane({ file, onChange, themeKey, onCursorChange }: EditorP
         tokenizer: {
           root: [
             [/^\s*#.*/, "comment"],
-            [/\b(command|trigger|if|else|loop|set|to|send|message|player|event|function|return|stop)\b/, "keyword"],
-            [/\b(true|false|null)\b/, "constant"],
+            [/\b(on|every|at|command|trigger|if|else|loop|set|to|send|message|player|event|function|return|stop|while|parse|add|remove|delete|clear|wait|teleport|kill|heal|damage|broadcast|execute|cancel|give|take)\b/, "keyword"],
+            [/\b(true|false|null|yes|no)\b/, "constant"],
+            [/\b(damage|death|join|quit|chat|click|break|place|respawn|move|drop|pickup|inventory|craft|consume|target|shoot|hit|world|region|time|weather)\b/, "event"],
             [/\d+/, "number"],
             [/"[^"]*"/, "string"],
             [/'[^']*'/, "string"],
             [/\/[a-zA-Z\-]+/, "type"], // commands like /hello
+            [/:$/, "colon"], // colon at end of line
           ],
         },
       } as any);
+
+      // Configure language settings for proper indentation
+      monaco.languages.setLanguageConfiguration("skript", {
+        brackets: [
+          ['{', '}'],
+          ['[', ']'],
+          ['(', ')']
+        ],
+        autoClosingPairs: [
+          { open: '{', close: '}' },
+          { open: '[', close: ']' },
+          { open: '(', close: ')' },
+          { open: '"', close: '"' },
+          { open: "'", close: "'" }
+        ],
+        surroundingPairs: [
+          { open: '{', close: '}' },
+          { open: '[', close: ']' },
+          { open: '(', close: ')' },
+          { open: '"', close: '"' },
+          { open: "'", close: "'" }
+        ],
+        indentationRules: {
+          increaseIndentPattern: /.*:$/,
+          decreaseIndentPattern: /^\s*(else|elif).*$/
+        },
+        onEnterRules: [
+          {
+            beforeText: /.*:$/,
+            action: { indentAction: monaco.languages.IndentAction.Indent }
+          }
+        ]
+      });
     }
 
     if (!skriptCompletionRegistered) {
       skriptCompletionRegistered = true;
       const keywords = [
-        "command", "trigger", "if", "else", "loop", "set", "to", "send", "message", "player", "event", "function", "return", "stop",
+        "command", "trigger", "if", "else", "loop", "set", "to", "send", "message", "player", "event", "function", "return", "stop", "on", "every", "at", "while", "parse", "add", "remove", "delete", "clear", "wait", "teleport", "kill", "heal", "damage", "broadcast", "execute", "cancel", "give", "take"
       ];
       const snippets = [
         {
           label: "command",
           kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: 'command /${1:name}:\n  trigger:\n    message "${2:text}"',
+          insertText: 'command /${1:name}:\n\ttrigger:\n\t\t${2:# Your command code here}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: "Skript command template",
+          documentation: "Skript command template with proper indentation",
+        },
+        {
+          label: "on damage",
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: 'on damage:\n\t${1:# Event code here}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: "Damage event with proper indentation",
+        },
+        {
+          label: "on death",
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: 'on death:\n\t${1:# Event code here}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: "Death event with proper indentation",
+        },
+        {
+          label: "on join",
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: 'on join:\n\t${1:# Event code here}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: "Join event with proper indentation",
+        },
+        {
+          label: "on quit",
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: 'on quit:\n\t${1:# Event code here}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: "Quit event with proper indentation",
+        },
+        {
+          label: "on chat",
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: 'on chat:\n\t${1:# Event code here}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: "Chat event with proper indentation",
         },
         {
           label: "if",
           kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: 'if ${1:condition}:\n  ${2:action}',
+          insertText: 'if ${1:condition}:\n\t${2:# Action here}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: "If statement",
+          documentation: "If statement with proper indentation",
+        },
+        {
+          label: "loop",
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: 'loop ${1:times}:\n\t${2:# Loop code here}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: "Loop statement with proper indentation",
+        },
+        {
+          label: "function",
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: 'function ${1:name}(${2:parameters}):\n\t${3:# Function code here}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: "Function definition with proper indentation",
         },
       ];
       monaco.languages.registerCompletionItemProvider("skript", {
