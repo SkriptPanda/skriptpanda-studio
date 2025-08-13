@@ -54,9 +54,10 @@ export const WorkspaceDashboard = ({ manager, onSelectWorkspace, onUpdateManager
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background p-6 animate-fade-in">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 animate-scale-in"
+             style={{ animationDelay: '0.1s' }}>
           <div>
             <h1 className="text-3xl font-bold text-foreground">SkriptPanda Workspaces</h1>
             <p className="text-muted-foreground mt-2">Manage your SkriptLang projects</p>
@@ -68,8 +69,12 @@ export const WorkspaceDashboard = ({ manager, onSelectWorkspace, onUpdateManager
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {manager.workspaces.map((workspace) => (
-            <Card key={workspace.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+          {manager.workspaces.map((workspace, index) => (
+            <Card 
+              key={workspace.id} 
+              className="hover:shadow-lg smooth-transition cursor-pointer hover-scale animate-bounce-in"
+              style={{ animationDelay: `${0.2 + index * 0.1}s` }}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
