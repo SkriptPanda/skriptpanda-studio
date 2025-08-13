@@ -129,7 +129,7 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
   }
 
   return (
-    <div className="fixed right-0 top-0 h-screen w-80 bg-background border-l shadow-lg z-40 flex flex-col animate-slide-in-right">
+    <div className="fixed right-0 top-0 h-screen w-80 bg-background border-l shadow-lg z-50 flex flex-col animate-slide-in-right">
       {/* Header */}
       <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-background z-10">
         <div className="flex items-center gap-2">

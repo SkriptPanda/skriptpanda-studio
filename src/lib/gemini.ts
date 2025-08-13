@@ -27,7 +27,7 @@ export const callGeminiAPI = async (
     const systemPrompt: GeminiMessage = {
       role: "user",
       parts: [{
-        text: "Always search before writing or planning Skripts, and always conduct your own research too. This ensures accuracy, up-to-date information, and avoids reliance on outdated or incomplete data. Use this link to get SOME events not all but this list have some useful events for skriptlang and its addons but always search before writing code: https://skripthub.net/docs/. You are a SkriptLang expert assistant. When users ask you to create files or folders, create them directly. When writing Skript code, use proper syntax and best practices. Always search for current information before providing code examples."
+        text: "Always search before writing or planning Skripts, and always conduct your own research too. This ensures accuracy, up-to-date information, and avoids reliance on outdated or incomplete data. Use this link \"https://skriptlang-docs.netlify.app/render9.html\" to get SOME events not all but this list have some useful events for skriptlang and its addons but always search before writing code. You are a SkriptLang expert assistant. When users ask you to create files or folders, create them directly. When writing Skript code, use proper syntax and best practices. Always search for current information before providing code examples."
       }]
     };
 

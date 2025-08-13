@@ -157,7 +157,7 @@ const Index = () => {
           onMove={(sourceId, targetId, position) => setTree((t) => moveNode(t, sourceId, targetId, position))}
           selectedId={activeId}
         />
-        <SidebarInset>
+        <SidebarInset className={chatOpen ? "mr-80" : ""}>
           {/* Top bar */}
           <header className="h-12 border-b flex items-center justify-between px-3 bg-gradient-to-r from-background via-background/80 to-background/60">
             <div className="flex items-center gap-2">
@@ -210,16 +210,16 @@ const Index = () => {
             <div>SkriptLang • Monaco • {mode === "dark" ? "Dark" : "Light"}</div>
           </footer>
         </SidebarInset>
-        
-        {/* Fixed Right Chat Panel */}
-        <AIChat
-          tree={tree}
-          onTreeUpdate={handleTreeUpdate}
-          onFileOpen={handleOpenFile}
-          isOpen={chatOpen}
-          onToggle={() => setChatOpen(!chatOpen)}
-        />
       </div>
+
+      {/* Fixed Right Chat Panel - Outside main layout */}
+      <AIChat
+        tree={tree}
+        onTreeUpdate={handleTreeUpdate}
+        onFileOpen={handleOpenFile}
+        isOpen={chatOpen}
+        onToggle={() => setChatOpen(!chatOpen)}
+      />
 
       {/* Create Dialog */}
       <Dialog open={!!createState} onOpenChange={(o) => !o && setCreateState(null)}>
