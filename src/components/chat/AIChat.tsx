@@ -115,7 +115,7 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
   return (
     <div className="flex flex-col h-full w-full">
       {/* Header */}
-      <div className="p-4 border-b flex items-center justify-between">
+      <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-background z-10">
         <div className="flex items-center gap-2">
           <Avatar className="h-6 w-6">
             <AvatarImage src="/panda3.png" alt="AI" />
@@ -142,8 +142,8 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
       <ScrollArea className="flex-1 p-4 overflow-auto">
         <div className="space-y-4" ref={scrollRef}>
           {messages.map((message, index) => (
-            <div 
-              key={message.id} 
+            <div
+              key={message.id}
               className={`flex gap-3 animate-fade-in ${message.role === "user" ? "justify-end" : ""}`}
               style={{ animationDelay: `${index * 0.1}s` }}
             >
@@ -154,8 +154,8 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
                 </Avatar>
               )}
               <div className={`max-w-[85%] p-3 rounded-lg ${
-                message.role === "user" 
-                  ? "bg-primary text-primary-foreground ml-auto" 
+                message.role === "user"
+                  ? "bg-primary text-primary-foreground ml-auto"
                   : "bg-muted"
               }`}>
                 <div className="text-sm whitespace-pre-wrap">{message.content}</div>

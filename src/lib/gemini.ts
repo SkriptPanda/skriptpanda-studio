@@ -44,9 +44,21 @@ export interface GeminiMessage {
 
 export const callGeminiAPI = async (
   messages: GeminiMessage[],
-  apiKey: string
+  apiKey: string,
+  withSystemPrompt = true
 ): Promise<string> => {
   try {
+    // System prompt for SkriptLang development
+    const systemPrompt: GeminiMessage = {
+      role: "user",
+      parts: [{
+        text: "Always search before writing or planning Skripts, and always conduct your own research too. This ensures accuracy, up-to-date information, and avoids reliance on outdated or incomplete data. Use this link \"https://skriptlang-docs.netlify.app/render9.html\" to get SOME events not all but this list have some useful events for skriptlang and its addons but always search before writing code. You are a SkriptLang expert assistant. When users ask you to create files or folders, create them directly. When writing Skript code, use proper syntax and best practices. Always search for current information before providing code examples."
+      }]
+    };
+
+    // Prepare messages with system prompt if enabled
+    const finalMessages = withSystemPrompt ? [systemPrompt, ...messages] : messages;
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
       {
@@ -61,9 +73,9 @@ export const callGeminiAPI = async (
           contents: messages,
           generationConfig: {
             temperature: 0.7,
-            topK: 1,
-            topP: 1,
-            maxOutputTokens: 2048,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 8192,
           },
           safetySettings: [
             {
