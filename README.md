@@ -1,5 +1,5 @@
 
-![Image](https://xnpvixeywrkcnpkqgkjh.supabase.co/storage/v1/object/public/rhost-files/1755098517297.png)
+![Image](https://xnpvixeywrkcnpkqgkjh.supabase.co/storage/v1/object/public/rhost-files/1755101835012.png)
 
 # Skript Panda.
 
