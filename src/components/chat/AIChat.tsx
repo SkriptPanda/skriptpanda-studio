@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { X, Key } from "lucide-react";
 import { FileTree, FileLeaf } from "@/lib/fs";
-import { getGeminiApiKey, setGeminiApiKey } from "@/lib/gemini";
+import { getGeminiApiKey, setGeminiApiKey, testGeminiApiKey } from "@/lib/gemini";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { useToast } from "@/components/ui/use-toast";
 import { ChatBar } from "@/components/chat/ChatBar";
 import { processAICommand } from "@/lib/ai-commands";
@@ -79,17 +80,40 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error("Error processing AI command:", error);
+
+      let errorContent = "I'm sorry, I encountered an error processing your request.";
+      let toastDescription = "Failed to process your request. Please try again.";
+
+      if (error instanceof Error) {
+        if (error.message.includes("401") || error.message.includes("Invalid API key")) {
+          errorContent = "❌ Invalid API key. Please check your Gemini API key and try again.";
+          toastDescription = "Invalid API key. Please update your API key.";
+        } else if (error.message.includes("403")) {
+          errorContent = "❌ API access denied. Please verify your Gemini API key has the necessary permissions.";
+          toastDescription = "API access denied. Check your API key permissions.";
+        } else if (error.message.includes("429")) {
+          errorContent = "❌ Rate limit exceeded. Please wait a moment and try again.";
+          toastDescription = "Rate limit exceeded. Please wait and try again.";
+        } else if (error.message.includes("500")) {
+          errorContent = "❌ Gemini API server error. This might be a temporary issue. Please try again in a few moments.";
+          toastDescription = "Server error. Please try again in a few moments.";
+        } else {
+          errorContent = `❌ Error: ${error.message}`;
+          toastDescription = error.message;
+        }
+      }
+
       const errorMessage: Message = {
         id: crypto.randomUUID(),
-        content: "I'm sorry, I encountered an error processing your request. Please check your API key and try again.",
+        content: errorContent,
         role: "assistant",
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
-      
+
       toast({
         title: "Error",
-        description: "Failed to process your request. Please try again.",
+        description: toastDescription,
         variant: "destructive"
       });
     } finally {
@@ -97,16 +121,32 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
     }
   };
 
-  const handleSaveApiKey = () => {
+  const handleSaveApiKey = async () => {
     if (apiKeyInput.trim()) {
-      setGeminiApiKey(apiKeyInput.trim());
-      setApiKey(apiKeyInput.trim());
-      setApiKeyInput("");
-      setShowApiKeyDialog(false);
+      // Test the API key before saving
       toast({
-        title: "API Key Saved",
-        description: "Your Gemini API key has been saved locally."
+        title: "Testing API Key",
+        description: "Validating your Gemini API key..."
       });
+
+      const isValid = await testGeminiApiKey(apiKeyInput.trim());
+
+      if (isValid) {
+        setGeminiApiKey(apiKeyInput.trim());
+        setApiKey(apiKeyInput.trim());
+        setApiKeyInput("");
+        setShowApiKeyDialog(false);
+        toast({
+          title: "API Key Saved",
+          description: "Your Gemini API key has been validated and saved locally."
+        });
+      } else {
+        toast({
+          title: "Invalid API Key",
+          description: "The API key you entered is not valid. Please check and try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -158,7 +198,14 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
                   ? "bg-primary text-primary-foreground ml-auto"
                   : "bg-muted"
               }`}>
-                <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                {message.role === "assistant" ? (
+                  <MarkdownRenderer
+                    content={message.content}
+                    className="text-sm [&>*:last-child]:mb-0"
+                  />
+                ) : (
+                  <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                )}
                 <div className={`text-xs mt-1 opacity-70`}>
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>

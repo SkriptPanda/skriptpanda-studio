@@ -1,4 +1,7 @@
-const GEMINI_API_KEY_STORAGE = "gemini-api-key";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { ENV } from "./env";
+
+const GEMINI_API_KEY_STORAGE = ENV.STORAGE_KEYS.GEMINI_API_KEY;
 
 export const SYSTEM_PROMPT = `You are SkriptPanda, a concise, helpful assistant inside SkriptPanda Studio.
 Your primary job is to help users with Minecraft Skript (SkriptLang) code and basic project/file management.
@@ -37,6 +40,28 @@ export const removeGeminiApiKey = (): void => {
   localStorage.removeItem(GEMINI_API_KEY_STORAGE);
 };
 
+// Test API key validity
+export const testGeminiApiKey = async (apiKey: string): Promise<boolean> => {
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-pro",
+      generationConfig: {
+        maxOutputTokens: 10,
+      }
+    });
+
+    const result = await model.generateContent("Hello");
+    const response = await result.response;
+    response.text(); // This will throw if there's an error
+
+    return true;
+  } catch (error) {
+    console.error("API key test failed:", error);
+    return false;
+  }
+};
+
 export interface GeminiMessage {
   role: "user" | "model";
   parts: { text: string }[];
@@ -45,73 +70,164 @@ export interface GeminiMessage {
 export const callGeminiAPI = async (
   messages: GeminiMessage[],
   apiKey: string,
-  withSystemPrompt = true
+  withSystemPrompt = true,
+  useGrounding = false
 ): Promise<string> => {
   try {
-    // System prompt for SkriptLang development
-    const systemPrompt: GeminiMessage = {
-      role: "user",
-      parts: [{
-        text: "Always search before writing or planning Skripts, and always conduct your own research too. This ensures accuracy, up-to-date information, and avoids reliance on outdated or incomplete data. Use this link \"https://skriptlang-docs.netlify.app/render9.html\" to get SOME events not all but this list have some useful events for skriptlang and its addons but always search before writing code. You are a SkriptLang expert assistant. When users ask you to create files or folders, create them directly. When writing Skript code, use proper syntax and best practices. Always search for current information before providing code examples."
-      }]
+    console.log(`🚀 Calling Gemini API with grounding: ${useGrounding}`);
+
+    // Initialize the Google GenAI client
+    const genAI = new GoogleGenerativeAI(apiKey);
+
+    // Configure the model with grounding if requested
+    const modelConfig: any = {
+      model: "gemini-2.5-pro",
+      systemInstruction: withSystemPrompt ? SYSTEM_PROMPT : undefined,
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+      },
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE",
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE",
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE",
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE",
+        },
+      ],
     };
 
-    // Prepare messages with system prompt if enabled
-    const finalMessages = withSystemPrompt ? [systemPrompt, ...messages] : messages;
+    // Add grounding tool if requested
+    if (useGrounding) {
+      modelConfig.tools = [
+        {
+          googleSearch: {}
+        }
+      ];
+      console.log("🔍 Google Search tool enabled for web search");
+    }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: SYSTEM_PROMPT }],
-          },
-          contents: messages,
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 8192,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE",
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE",
-            },
-            {
-              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE",
-            },
-            {
-              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE",
-            },
-          ],
-        }),
+    const model = genAI.getGenerativeModel(modelConfig);
+
+    // Convert messages to the format expected by the new client
+    // For single message, just pass the text directly
+    if (messages.length === 1) {
+      const message = messages[0];
+      const prompt = message.parts[0].text;
+
+      console.log(`📤 Sending single message to Gemini`);
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+
+      // Handle response with potential tool calls
+      let text = "";
+      try {
+        text = response.text();
+        console.log("📝 Response text length:", text.length);
+        console.log("📝 Response preview:", text.substring(0, 100) + "...");
+      } catch (error) {
+        console.warn("⚠️ Failed to get text directly, trying alternative method:", error);
+        // If direct text() fails, try to get content from candidates
+        if (response.candidates && response.candidates[0] && response.candidates[0].content) {
+          const content = response.candidates[0].content;
+          if (content.parts && content.parts[0] && content.parts[0].text) {
+            text = content.parts[0].text;
+            console.log("📝 Extracted text from candidates:", text.length, "characters");
+          } else {
+            console.warn("❌ No text content found in response:", content);
+            text = "I apologize, but I couldn't generate a proper response. Please try again.";
+          }
+        } else {
+          console.error("❌ No candidates found in response:", response);
+          console.log("Full response object:", JSON.stringify(response, null, 2));
+          text = "I apologize, but I couldn't generate a response. Please try again.";
+        }
       }
-    );
 
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+      if (!text || text.trim().length === 0) {
+        console.error("❌ Empty response received from Gemini API");
+        text = "I received an empty response. Please try rephrasing your request.";
+      }
+
+      console.log("✅ Successfully received response from Gemini API");
+      return text;
+    } else {
+      // For multiple messages, use chat format
+      const chat = model.startChat({
+        history: messages.slice(0, -1).map(msg => ({
+          role: msg.role === "model" ? "model" : "user",
+          parts: [{ text: msg.parts[0].text }]
+        }))
+      });
+
+      const lastMessage = messages[messages.length - 1];
+      console.log(`📤 Sending chat message to Gemini`);
+      const result = await chat.sendMessage(lastMessage.parts[0].text);
+      const response = await result.response;
+
+      // Handle response with potential tool calls
+      let text = "";
+      try {
+        text = response.text();
+        console.log("📝 Chat response text length:", text.length);
+        console.log("📝 Chat response preview:", text.substring(0, 100) + "...");
+      } catch (error) {
+        console.warn("⚠️ Failed to get chat text directly, trying alternative method:", error);
+        // If direct text() fails, try to get content from candidates
+        if (response.candidates && response.candidates[0] && response.candidates[0].content) {
+          const content = response.candidates[0].content;
+          if (content.parts && content.parts[0] && content.parts[0].text) {
+            text = content.parts[0].text;
+            console.log("📝 Extracted chat text from candidates:", text.length, "characters");
+          } else {
+            console.warn("❌ No text content found in chat response:", content);
+            text = "I apologize, but I couldn't generate a proper response. Please try again.";
+          }
+        } else {
+          console.error("❌ No candidates found in chat response:", response);
+          console.log("Full chat response object:", JSON.stringify(response, null, 2));
+          text = "I apologize, but I couldn't generate a response. Please try again.";
+        }
+      }
+
+      if (!text || text.trim().length === 0) {
+        console.error("❌ Empty chat response received from Gemini API");
+        text = "I received an empty response. Please try rephrasing your request.";
+      }
+
+      console.log("✅ Successfully received response from Gemini API");
+      return text;
     }
 
-    const data = await response.json();
-    
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      throw new Error("Invalid response from Gemini API");
-    }
 
-    return data.candidates[0].content.parts[0].text;
   } catch (error) {
-    console.error("Error calling Gemini API:", error);
+    console.error("❌ Error calling Gemini API:", error);
+
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes("API_KEY_INVALID") || error.message.includes("401")) {
+        throw new Error("Invalid API key. Please check your Gemini API key and try again.");
+      } else if (error.message.includes("403")) {
+        throw new Error("API access denied. Please verify your Gemini API key has the necessary permissions.");
+      } else if (error.message.includes("429")) {
+        throw new Error("Rate limit exceeded. Please wait a moment and try again.");
+      } else if (error.message.includes("500")) {
+        throw new Error("Gemini API server error. This might be a temporary issue. Please try again in a few moments.");
+      }
+    }
+
     throw error;
   }
 };

@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { EarlyAccessAuth } from "@/components/auth/EarlyAccessAuth";
 import { useEarlyAccess } from "@/hooks/useEarlyAccess";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ENV } from "@/lib/env";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -45,13 +47,15 @@ function AppContent() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppContent />
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AppContent />
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

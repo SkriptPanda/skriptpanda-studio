@@ -12,6 +12,7 @@ import { getGeminiApiKey, setGeminiApiKey } from "@/lib/gemini";
 import { useToast } from "@/components/ui/use-toast";
 import { ChatBar } from "@/components/chat/ChatBar";
 import { processAICommand } from "@/lib/ai-commands";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 
 interface Message {
   id: string;
@@ -82,23 +83,16 @@ export const ChatContainer = ({
     setIsLoading(true);
 
     try {
-      // Show search indicator
-      const searchMessage: Message = {
-        id: crypto.randomUUID(),
-        content: "🔍 Researching current SkriptLang documentation and best practices...",
-        role: "assistant",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, searchMessage]);
-
       const response = await processAICommand(text.trim(), tree, onTreeUpdate, onFileOpen, apiKey);
 
-      // Remove search indicator and add actual response
-      setMessages(prev => prev.filter(msg => msg.id !== searchMessage.id));
+      console.log("🎯 AI Response received in ChatContainer:");
+      console.log("📝 Response type:", typeof response);
+      console.log("📝 Response length:", response?.length || 0);
+      console.log("📝 Response content:", response?.substring(0, 100) + "...");
 
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
-        content: response,
+        content: response || "I apologize, but I received an empty response. Please try again.",
         role: "assistant",
         timestamp: new Date()
       };
@@ -203,11 +197,18 @@ export const ChatContainer = ({
                   </Avatar>
                 )}
                 <div className={`max-w-[85%] p-3 rounded-lg ${
-                  message.role === "user" 
-                    ? "bg-primary text-primary-foreground ml-auto" 
+                  message.role === "user"
+                    ? "bg-primary text-primary-foreground ml-auto"
                     : "bg-muted"
                 }`}>
-                  <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                  {message.role === "assistant" ? (
+                    <MarkdownRenderer
+                      content={message.content}
+                      className="text-sm [&>*:last-child]:mb-0"
+                    />
+                  ) : (
+                    <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                  )}
                   <div className={`text-xs mt-1 opacity-70`}>
                     {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>

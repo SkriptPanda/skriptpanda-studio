@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { ENV } from "@/lib/env";
 
-const STORAGE_KEY = "skriptpanda.early_access_authenticated";
+const STORAGE_KEY = ENV.STORAGE_KEYS.EARLY_ACCESS_CODE;
 
 export function useEarlyAccess() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
