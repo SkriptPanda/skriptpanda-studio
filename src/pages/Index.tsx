@@ -4,7 +4,8 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { EditorPane } from "@/components/editor/EditorPane";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
-import { Download, X, Home } from "lucide-react";
+import { useEarlyAccess } from "@/hooks/useEarlyAccess";
+import { Download, X, Home, LogOut } from "lucide-react";
 import {
   FileLeaf,
   FileNode,
@@ -25,22 +26,55 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { WorkspaceDashboard } from "@/components/workspace/WorkspaceDashboard";
-import { AIChat } from "@/components/chat/AIChat";
+import { ChatPopup } from "@/components/chat/ChatPopup";
 import { loadWorkspaces, switchWorkspace, updateWorkspaceTree } from "@/lib/workspace";
 import { WorkspaceManager } from "@/types/workspace";
 
 const Index = () => {
+  const { logout } = useEarlyAccess();
   const [workspaceManager, setWorkspaceManager] = useState<WorkspaceManager>(() => loadWorkspaces());
-  const [showDashboard, setShowDashboard] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(true);
   const [tree, setTree] = useState<FileTree>(() => {
     const activeWorkspace = workspaceManager.workspaces.find(ws => ws.id === workspaceManager.activeWorkspaceId);
     return activeWorkspace?.tree || loadTree();
   });
-  const [openTabs, setOpenTabs] = useState<FileLeaf[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [mode, setMode] = useState<string>("sp-dark");
+  const [openTabs, setOpenTabs] = useState<FileLeaf[]>(() => {
+    try {
+      const workspaceId = workspaceManager.activeWorkspaceId;
+      const saved = localStorage.getItem(`skriptpanda.openTabs.${workspaceId}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [activeId, setActiveId] = useState<string | null>(() => {
+    const workspaceId = workspaceManager.activeWorkspaceId;
+    return localStorage.getItem(`skriptpanda.activeFileId.${workspaceId}`) || null;
+  });
+  const [mode, setMode] = useState<string>(() => localStorage.getItem("skriptpanda.theme") || "sp-dark");
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatPopupOpen, setChatPopupOpen] = useState(false);
+
+  // Ensure theme is properly applied on mount and synchronized
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("skriptpanda.theme") || "sp-dark";
+    if (mode !== savedTheme) {
+      setMode(savedTheme);
+    }
+
+    // Force apply theme to ensure synchronization
+    const themes = [
+      { key: "sp-dark", dark: true },
+      { key: "sp-light", dark: false },
+      { key: "dracula", dark: true },
+      { key: "solarized", dark: false },
+    ];
+
+    const theme = themes.find(t => t.key === savedTheme) || themes[0];
+    document.body.classList.remove(...themes.map(t => `theme-${t.key}`), "dark");
+    document.body.classList.add(`theme-${theme.key}`);
+    if (theme.dark) document.body.classList.add("dark");
+  }, []);
 
   // Dialog states
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -48,12 +82,49 @@ const Index = () => {
   const [createState, setCreateState] = useState<{ parentId: string; type: "file" | "folder"; name: string } | null>(null);
 
   useEffect(() => {
-    if (workspaceManager.activeWorkspaceId) {
-      const updatedManager = updateWorkspaceTree(workspaceManager, workspaceManager.activeWorkspaceId, tree);
-      setWorkspaceManager(updatedManager);
-    }
+    setWorkspaceManager((prev) => {
+      if (prev.activeWorkspaceId) {
+        return updateWorkspaceTree(prev, prev.activeWorkspaceId, tree);
+      }
+      return prev;
+    });
     saveTree(tree);
   }, [tree]);
+
+  // Save open tabs to localStorage whenever they change
+  useEffect(() => {
+    const workspaceId = workspaceManager.activeWorkspaceId;
+    if (workspaceId) {
+      localStorage.setItem(`skriptpanda.openTabs.${workspaceId}`, JSON.stringify(openTabs));
+    }
+  }, [openTabs, workspaceManager.activeWorkspaceId]);
+
+  // Save active file ID to localStorage whenever it changes
+  useEffect(() => {
+    const workspaceId = workspaceManager.activeWorkspaceId;
+    if (workspaceId) {
+      if (activeId) {
+        localStorage.setItem(`skriptpanda.activeFileId.${workspaceId}`, activeId);
+      } else {
+        localStorage.removeItem(`skriptpanda.activeFileId.${workspaceId}`);
+      }
+    }
+  }, [activeId, workspaceManager.activeWorkspaceId]);
+
+  // Keyboard shortcut for chat popup (Ctrl+L)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key.toLowerCase() === 'l') {
+        event.preventDefault();
+        event.stopPropagation();
+        setChatPopupOpen(prev => !prev);
+      }
+    };
+
+    // Use capture phase to intercept before Monaco Editor
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, []);
 
   const activeFile = useMemo(() => openTabs.find((t) => t.id === activeId) ?? null, [openTabs, activeId]);
 
@@ -110,8 +181,33 @@ const Index = () => {
     const workspace = updatedManager.workspaces.find(ws => ws.id === workspaceId);
     if (workspace) {
       setTree(workspace.tree);
-      setOpenTabs([]);
-      setActiveId(null);
+
+      // Load saved state for the new workspace
+      try {
+        const savedTabs = localStorage.getItem(`skriptpanda.openTabs.${workspaceId}`);
+        const savedActiveId = localStorage.getItem(`skriptpanda.activeFileId.${workspaceId}`);
+
+        if (savedTabs) {
+          const tabs = JSON.parse(savedTabs);
+          // Validate that saved tabs still exist in the workspace tree
+          const validTabs = tabs.filter((tab: FileLeaf) => findNode(workspace.tree, tab.id));
+          setOpenTabs(validTabs);
+
+          if (savedActiveId && validTabs.some((tab: FileLeaf) => tab.id === savedActiveId)) {
+            setActiveId(savedActiveId);
+          } else if (validTabs.length > 0) {
+            setActiveId(validTabs[0].id);
+          } else {
+            setActiveId(null);
+          }
+        } else {
+          setOpenTabs([]);
+          setActiveId(null);
+        }
+      } catch {
+        setOpenTabs([]);
+        setActiveId(null);
+      }
     }
     setShowDashboard(false);
   };
@@ -120,10 +216,21 @@ const Index = () => {
     setTree(newTree);
   };
 
-  // Ensure we re-open initial README on first load
+  // Restore last opened files and validate they still exist in the tree
   useEffect(() => {
-    if (openTabs.length === 0) {
-      const readme = findNode(tree, tree.children.find(Boolean)?.id || "");
+    // Validate that saved tabs still exist in the current tree
+    const validTabs = openTabs.filter(tab => findNode(tree, tab.id));
+    if (validTabs.length !== openTabs.length) {
+      setOpenTabs(validTabs);
+    }
+
+    // Validate that active file still exists
+    if (activeId && !findNode(tree, activeId)) {
+      setActiveId(validTabs[0]?.id || null);
+    }
+
+    // If no tabs are open, open a default file
+    if (validTabs.length === 0) {
       const scriptsFolder = tree.children.find((c) => c.type === "folder") as FileNode | undefined;
       if (scriptsFolder && scriptsFolder.type === "folder" && scriptsFolder.children[0] && scriptsFolder.children[0].type === "file") {
         handleOpenFile(scriptsFolder.children[0]);
@@ -180,6 +287,17 @@ const Index = () => {
                 <Download className="h-4 w-4 mr-1" /> Export Zip
               </Button>
               <ThemeSwitcher onModeChange={setMode} />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={logout}
+                title="Logout from Early Access"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+              <div className="text-xs text-muted-foreground ml-2">
+                Press <kbd className="px-1 py-0.5 text-xs bg-muted rounded">Ctrl+L</kbd> for AI Chat
+              </div>
             </div>
           </header>
 
@@ -199,27 +317,20 @@ const Index = () => {
             ))}
           </div>
 
-          {/* Editor */}
-          <div className="flex-1 min-h-0">
+          {/* Editor - Full Width */}
+          <div className="flex-1 min-h-0 overflow-hidden">
             <EditorPane file={activeFile} onChange={handleChange} themeKey={mode} onCursorChange={setCursor} />
           </div>
 
           {/* Status bar */}
           <footer className="h-7 border-t text-xs flex items-center justify-between px-3 text-muted-foreground">
             <div>Ln {cursor.line}, Col {cursor.column}</div>
-            <div>SkriptLang • Monaco • {mode === "dark" ? "Dark" : "Light"}</div>
+            <div>SkriptLang • Monaco • {mode.charAt(0).toUpperCase() + mode.slice(1).replace('-', ' ')}</div>
           </footer>
         </SidebarInset>
       </div>
 
-      {/* AI Chat */}
-      <AIChat
-        tree={tree}
-        onTreeUpdate={handleTreeUpdate}
-        onFileOpen={handleOpenFile}
-        isOpen={chatOpen}
-        onToggle={() => setChatOpen(!chatOpen)}
-      />
+      {/* AI Chat moved into ResizablePanelGroup beside the editor */}
 
       {/* Create Dialog */}
       <Dialog open={!!createState} onOpenChange={(o) => !o && setCreateState(null)}>
@@ -310,6 +421,15 @@ const Index = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Chat Popup - Triggered by Ctrl+L */}
+      <ChatPopup
+        tree={tree}
+        onTreeUpdate={handleTreeUpdate}
+        onFileOpen={handleOpenFile}
+        isOpen={chatPopupOpen}
+        onClose={() => setChatPopupOpen(false)}
+      />
     </SidebarProvider>
   );
 };

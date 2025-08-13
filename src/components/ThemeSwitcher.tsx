@@ -17,6 +17,8 @@ export function ThemeSwitcher({ onModeChange }: { onModeChange?: (mode: string) 
 
   useEffect(() => {
     applyTheme(theme);
+    // Notify parent component of initial theme
+    onModeChange?.(theme);
   }, []);
 
   function applyTheme(key: string) {

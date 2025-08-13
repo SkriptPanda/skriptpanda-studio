@@ -1,14 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Send, Bot, User, X, Key, AlertCircle } from "lucide-react";
-import { FileTree, createFile, createFolder, addChild, updateFileContent } from "@/lib/fs";
-import { getGeminiApiKey, setGeminiApiKey, callGeminiAPI, GeminiMessage } from "@/lib/gemini";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { X, Key } from "lucide-react";
+import { FileTree, FileLeaf } from "@/lib/fs";
+import { getGeminiApiKey, setGeminiApiKey } from "@/lib/gemini";
 import { useToast } from "@/components/ui/use-toast";
+import { ChatBar } from "@/components/chat/ChatBar";
+import { processAICommand } from "@/lib/ai-commands";
 
 interface Message {
   id: string;
@@ -20,7 +23,7 @@ interface Message {
 interface AIChatProps {
   tree: FileTree;
   onTreeUpdate: (tree: FileTree) => void;
-  onFileOpen: (file: any) => void;
+  onFileOpen: (file: FileLeaf) => void;
   isOpen: boolean;
   onToggle: () => void;
 }
@@ -35,7 +38,6 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
       timestamp: new Date()
     }
   ]);
-  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState("");
@@ -48,8 +50,8 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
     }
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const handleSend = async (text: string) => {
+    if (!text.trim() || isLoading) return;
 
     if (!apiKey) {
       setShowApiKeyDialog(true);
@@ -58,17 +60,16 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
-      content: input.trim(),
+      content: text.trim(),
       role: "user",
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput("");
     setIsLoading(true);
 
     try {
-      const response = await processAICommand(input.trim(), tree, onTreeUpdate, onFileOpen, apiKey);
+      const response = await processAICommand(text.trim(), tree, onTreeUpdate, onFileOpen, apiKey);
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         content: response,
@@ -96,13 +97,6 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
   const handleSaveApiKey = () => {
     if (apiKeyInput.trim()) {
       setGeminiApiKey(apiKeyInput.trim());
@@ -116,24 +110,17 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
     }
   };
 
-  if (!isOpen) {
-    return (
-      <Button
-        onClick={onToggle}
-        className="fixed right-4 top-1/2 -translate-y-1/2 z-50 rounded-l-lg rounded-r-none bg-primary hover:bg-primary/90 animate-slide-in-right"
-        size="sm"
-      >
-        <Bot className="h-4 w-4" />
-      </Button>
-    );
-  }
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed right-0 top-0 h-full w-80 bg-background border-l shadow-lg z-40 flex flex-col animate-slide-in-right">
+    <div className="flex flex-col h-full w-full">
       {/* Header */}
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Bot className="h-5 w-5 text-primary" />
+          <Avatar className="h-6 w-6">
+            <AvatarImage src="/panda3.png" alt="AI" />
+            <AvatarFallback>AI</AvatarFallback>
+          </Avatar>
           <h2 className="font-semibold">AI Assistant</h2>
           {!apiKey && (
             <Button
@@ -152,8 +139,8 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        <div className="space-y-4">
+      <ScrollArea className="flex-1 p-4 overflow-auto">
+        <div className="space-y-4" ref={scrollRef}>
           {messages.map((message, index) => (
             <div 
               key={message.id} 
@@ -161,9 +148,10 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               {message.role === "assistant" && (
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Bot className="h-4 w-4 text-primary" />
-                </div>
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarImage src="/panda3.png" alt="AI" />
+                  <AvatarFallback>AI</AvatarFallback>
+                </Avatar>
               )}
               <div className={`max-w-[85%] p-3 rounded-lg ${
                 message.role === "user" 
@@ -176,17 +164,19 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
                 </div>
               </div>
               {message.role === "user" && (
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <User className="h-4 w-4" />
-                </div>
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarImage src="" alt="You" />
+                  <AvatarFallback>U</AvatarFallback>
+                </Avatar>
               )}
             </div>
           ))}
           {isLoading && (
             <div className="flex gap-3 animate-scale-in">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Bot className="h-4 w-4 text-primary" />
-              </div>
+              <Avatar className="h-8 w-8 flex-shrink-0">
+                <AvatarImage src="/panda3.png" alt="AI" />
+                <AvatarFallback>AI</AvatarFallback>
+              </Avatar>
               <div className="bg-muted p-3 rounded-lg">
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-current rounded-full animate-pulse"></div>
@@ -202,34 +192,12 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
       <Separator />
 
       {/* Input */}
-      <div className="p-4">
-        {!apiKey && (
-          <div className="mb-3 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg flex items-center gap-2 text-sm text-orange-700 dark:text-orange-300">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            <span>API key required for AI responses</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowApiKeyDialog(true)}
-              className="ml-auto text-orange-600 hover:text-orange-700 p-1"
-            >
-              <Key className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-        <div className="flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask me to create files or folders..."
-            disabled={isLoading}
-          />
-          <Button onClick={handleSend} disabled={!input.trim() || isLoading} size="sm">
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <ChatBar
+        hasApiKey={!!apiKey}
+        isLoading={isLoading}
+        onSend={handleSend}
+        onRequestApiKey={() => setShowApiKeyDialog(true)}
+      />
 
       {/* API Key Dialog */}
       <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
@@ -278,152 +246,3 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
   );
 };
 
-// AI command processing using Gemini API
-const processAICommand = async (
-  input: string, 
-  tree: FileTree, 
-  onTreeUpdate: (tree: FileTree) => void,
-  onFileOpen: (file: any) => void,
-  apiKey: string
-): Promise<string> => {
-  const lowerInput = input.toLowerCase();
-
-  // First handle direct file/folder creation commands
-  if (lowerInput.includes("create") && lowerInput.includes("folder")) {
-    const match = input.match(/folder.*?['""]([^'""]+)['""]|folder.*?([\w-]+)/i);
-    if (match) {
-      const folderName = match[1] || match[2];
-      const folder = createFolder(folderName);
-      const updatedTree = addChild(tree, tree.id, folder);
-      onTreeUpdate(updatedTree);
-      return `Created folder "${folderName}" successfully!`;
-    }
-    return "Please specify a folder name, like: 'Create a folder called commands'";
-  }
-
-  if (lowerInput.includes("create") && lowerInput.includes("file")) {
-    const match = input.match(/file.*?['""]([^'""]+)['""]|file.*?([\w.-]+)/i);
-    if (match) {
-      const fileName = match[1] || match[2];
-      try {
-        const content = await generateFileContent(fileName, input, apiKey);
-        const file = createFile(fileName, content);
-        const updatedTree = addChild(tree, tree.id, file);
-        onTreeUpdate(updatedTree);
-        onFileOpen(file);
-        return `Created file "${fileName}" with AI-generated content and opened it for you!`;
-      } catch (error) {
-        const basicContent = getBasicFileContent(fileName, input);
-        const file = createFile(fileName, basicContent);
-        const updatedTree = addChild(tree, tree.id, file);
-        onTreeUpdate(updatedTree);
-        onFileOpen(file);
-        return `Created file "${fileName}" with basic content. (AI generation failed, but file was created successfully)`;
-      }
-    }
-    return "Please specify a file name, like: 'Create a file called teleport.sk'";
-  }
-
-  // For other requests, use Gemini API to generate intelligent responses
-  try {
-    const messages: GeminiMessage[] = [
-      {
-        role: "user",
-        parts: [{
-          text: `You are a SkriptLang assistant. The user said: "${input}". 
-
-If they want to create a specific script or need help with SkriptLang code, provide helpful code examples and explanations.
-
-Current project structure context: The user has a file tree structure where they can create folders and .sk files for SkriptLang scripts.
-
-Respond helpfully and concisely. If they're asking for a specific script, provide clean, working SkriptLang code.`
-        }]
-      }
-    ];
-
-    const response = await callGeminiAPI(messages, apiKey);
-    
-    // Check if the response suggests creating a file and do it automatically
-    if (response.toLowerCase().includes("create") && response.toLowerCase().includes(".sk")) {
-      const codeMatch = response.match(/```(?:skript|sk)?\n([\s\S]*?)\n```/);
-      if (codeMatch) {
-        const code = codeMatch[1];
-        const fileName = extractFileNameFromResponse(response) || "generated-script.sk";
-        const file = createFile(fileName, code);
-        const updatedTree = addChild(tree, tree.id, file);
-        onTreeUpdate(updatedTree);
-        onFileOpen(file);
-        return response + `\n\n✅ I've also created the file "${fileName}" for you with this code!`;
-      }
-    }
-    
-    return response;
-  } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    return "I'm having trouble connecting to the AI service. Please check your API key and internet connection.";
-  }
-};
-
-const generateFileContent = async (fileName: string, prompt: string, apiKey: string): Promise<string> => {
-  const messages: GeminiMessage[] = [
-    {
-      role: "user",
-      parts: [{
-        text: `Generate SkriptLang code for a file named "${fileName}" based on this request: "${prompt}".
-
-Please provide clean, working SkriptLang code that follows best practices. Include appropriate comments and make sure the syntax is correct for SkriptLang.
-
-Only respond with the code, no extra explanation text.`
-      }]
-    }
-  ];
-
-  const response = await callGeminiAPI(messages, apiKey);
-  
-  // Extract code from response if it's wrapped in code blocks
-  const codeMatch = response.match(/```(?:skript|sk)?\n([\s\S]*?)\n```/);
-  if (codeMatch) {
-    return codeMatch[1];
-  }
-  
-  return response;
-};
-
-const extractFileNameFromResponse = (response: string): string | null => {
-  const fileMatch = response.match(/file.*?['""]([^'""]+\.sk)['""]|(\w+\.sk)/i);
-  return fileMatch ? (fileMatch[1] || fileMatch[2]) : null;
-};
-
-const getBasicFileContent = (fileName: string, input: string): string => {
-  const lowerInput = input.toLowerCase();
-  
-  if (fileName.endsWith('.sk')) {
-    if (lowerInput.includes("teleport") || lowerInput.includes("tp")) {
-      return `command /tp <player> <target>:
-    permission: teleport.use
-    trigger:
-        teleport arg-1 to arg-2
-        send "&aTeleported!" to sender`;
-    }
-    
-    if (lowerInput.includes("heal")) {
-      return `command /heal [player]:
-    permission: heal.use
-    trigger:
-        if arg-1 is set:
-            heal arg-1
-            send "&aHealed %arg-1%!" to sender
-        else:
-            heal sender
-            send "&aYou have been healed!" to sender`;
-    }
-
-    return `# New SkriptLang file
-# Write your script here
-
-on load:
-    send "&aScript loaded successfully!" to console`;
-  }
-  
-  return "# New file\n";
-};

@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Workspace, WorkspaceManager } from "@/types/workspace";
 import { createWorkspace, deleteWorkspace } from "@/lib/workspace";
 import { Plus, Trash2, FolderOpen } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface WorkspaceDashboardProps {
   manager: WorkspaceManager;
@@ -58,9 +59,15 @@ export const WorkspaceDashboard = ({ manager, onSelectWorkspace, onUpdateManager
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8 animate-scale-in"
              style={{ animationDelay: '0.1s' }}>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">SkriptPanda Workspaces</h1>
-            <p className="text-muted-foreground mt-2">Manage your SkriptLang projects</p>
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src="/panda3.png" alt="SkriptPanda" />
+              <AvatarFallback>SP</AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">SkriptPanda Workspaces</h1>
+              <p className="text-muted-foreground mt-1">Manage your SkriptLang projects</p>
+            </div>
           </div>
           <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
             <Plus className="h-4 w-4" />
