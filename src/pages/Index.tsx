@@ -210,16 +210,16 @@ const Index = () => {
             <div>SkriptLang • Monaco • {mode === "dark" ? "Dark" : "Light"}</div>
           </footer>
         </SidebarInset>
+        
+        {/* Fixed Right Chat Panel */}
+        <AIChat
+          tree={tree}
+          onTreeUpdate={handleTreeUpdate}
+          onFileOpen={handleOpenFile}
+          isOpen={chatOpen}
+          onToggle={() => setChatOpen(!chatOpen)}
+        />
       </div>
-
-      {/* AI Chat */}
-      <AIChat
-        tree={tree}
-        onTreeUpdate={handleTreeUpdate}
-        onFileOpen={handleOpenFile}
-        isOpen={chatOpen}
-        onToggle={() => setChatOpen(!chatOpen)}
-      />
 
       {/* Create Dialog */}
       <Dialog open={!!createState} onOpenChange={(o) => !o && setCreateState(null)}>

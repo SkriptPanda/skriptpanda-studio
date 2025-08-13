@@ -129,9 +129,9 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
   }
 
   return (
-    <div className="fixed right-0 top-0 h-full w-80 bg-background border-l shadow-lg z-40 flex flex-col animate-slide-in-right">
+    <div className="fixed right-0 top-0 h-screen w-80 bg-background border-l shadow-lg z-40 flex flex-col animate-slide-in-right">
       {/* Header */}
-      <div className="p-4 border-b flex items-center justify-between">
+      <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-background z-10">
         <div className="flex items-center gap-2">
           <Bot className="h-5 w-5 text-primary" />
           <h2 className="font-semibold">AI Assistant</h2>
@@ -152,57 +152,59 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        <div className="space-y-4">
-          {messages.map((message, index) => (
-            <div 
-              key={message.id} 
-              className={`flex gap-3 animate-fade-in ${message.role === "user" ? "justify-end" : ""}`}
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              {message.role === "assistant" && (
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full p-4" ref={scrollRef}>
+          <div className="space-y-4">
+            {messages.map((message, index) => (
+              <div 
+                key={message.id} 
+                className={`flex gap-3 animate-fade-in ${message.role === "user" ? "justify-end" : ""}`}
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                {message.role === "assistant" && (
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-4 w-4 text-primary" />
+                  </div>
+                )}
+                <div className={`max-w-[85%] p-3 rounded-lg ${
+                  message.role === "user" 
+                    ? "bg-primary text-primary-foreground ml-auto" 
+                    : "bg-muted"
+                }`}>
+                  <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                  <div className={`text-xs mt-1 opacity-70`}>
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+                {message.role === "user" && (
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <User className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex gap-3 animate-scale-in">
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <Bot className="h-4 w-4 text-primary" />
                 </div>
-              )}
-              <div className={`max-w-[85%] p-3 rounded-lg ${
-                message.role === "user" 
-                  ? "bg-primary text-primary-foreground ml-auto" 
-                  : "bg-muted"
-              }`}>
-                <div className="text-sm whitespace-pre-wrap">{message.content}</div>
-                <div className={`text-xs mt-1 opacity-70`}>
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <div className="bg-muted p-3 rounded-lg">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-current rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 bg-current rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                    <div className="w-2 h-2 bg-current rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                  </div>
                 </div>
               </div>
-              {message.role === "user" && (
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <User className="h-4 w-4" />
-                </div>
-              )}
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex gap-3 animate-scale-in">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Bot className="h-4 w-4 text-primary" />
-              </div>
-              <div className="bg-muted p-3 rounded-lg">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-current rounded-full animate-pulse"></div>
-                  <div className="w-2 h-2 bg-current rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                  <div className="w-2 h-2 bg-current rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
 
       <Separator />
 
       {/* Input */}
-      <div className="p-4">
+      <div className="p-4 sticky bottom-0 bg-background">
         {!apiKey && (
           <div className="mb-3 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg flex items-center gap-2 text-sm text-orange-700 dark:text-orange-300">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
