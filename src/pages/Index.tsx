@@ -4,7 +4,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { EditorPane } from "@/components/editor/EditorPane";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
-import { Download, X } from "lucide-react";
+import { Download, X, Home } from "lucide-react";
 import {
   FileLeaf,
   FileNode,
@@ -24,13 +24,23 @@ import { exportTreeAsZip } from "@/lib/zip";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { WorkspaceDashboard } from "@/components/workspace/WorkspaceDashboard";
+import { AIChat } from "@/components/chat/AIChat";
+import { loadWorkspaces, switchWorkspace, updateWorkspaceTree } from "@/lib/workspace";
+import { WorkspaceManager } from "@/types/workspace";
 
 const Index = () => {
-  const [tree, setTree] = useState<FileTree>(() => loadTree());
+  const [workspaceManager, setWorkspaceManager] = useState<WorkspaceManager>(() => loadWorkspaces());
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [tree, setTree] = useState<FileTree>(() => {
+    const activeWorkspace = workspaceManager.workspaces.find(ws => ws.id === workspaceManager.activeWorkspaceId);
+    return activeWorkspace?.tree || loadTree();
+  });
   const [openTabs, setOpenTabs] = useState<FileLeaf[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [mode, setMode] = useState<string>("sp-dark");
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
+  const [chatOpen, setChatOpen] = useState(false);
 
   // Dialog states
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -38,6 +48,10 @@ const Index = () => {
   const [createState, setCreateState] = useState<{ parentId: string; type: "file" | "folder"; name: string } | null>(null);
 
   useEffect(() => {
+    if (workspaceManager.activeWorkspaceId) {
+      const updatedManager = updateWorkspaceTree(workspaceManager, workspaceManager.activeWorkspaceId, tree);
+      setWorkspaceManager(updatedManager);
+    }
     saveTree(tree);
   }, [tree]);
 
@@ -85,7 +99,25 @@ const Index = () => {
   const selectTab = (id: string) => setActiveId(id);
 
   const handleExport = async () => {
-    await exportTreeAsZip(tree, "skriptpanda-workspace.zip");
+    const activeWorkspace = workspaceManager.workspaces.find(ws => ws.id === workspaceManager.activeWorkspaceId);
+    const fileName = activeWorkspace ? `${activeWorkspace.name.replace(/\s+/g, '-')}-workspace.zip` : "skriptpanda-workspace.zip";
+    await exportTreeAsZip(tree, fileName);
+  };
+
+  const handleSelectWorkspace = (workspaceId: string) => {
+    const updatedManager = switchWorkspace(workspaceManager, workspaceId);
+    setWorkspaceManager(updatedManager);
+    const workspace = updatedManager.workspaces.find(ws => ws.id === workspaceId);
+    if (workspace) {
+      setTree(workspace.tree);
+      setOpenTabs([]);
+      setActiveId(null);
+    }
+    setShowDashboard(false);
+  };
+
+  const handleTreeUpdate = (newTree: FileTree) => {
+    setTree(newTree);
   };
 
   // Ensure we re-open initial README on first load
@@ -99,6 +131,16 @@ const Index = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (showDashboard) {
+    return (
+      <WorkspaceDashboard
+        manager={workspaceManager}
+        onSelectWorkspace={handleSelectWorkspace}
+        onUpdateManager={setWorkspaceManager}
+      />
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -120,6 +162,15 @@ const Index = () => {
           <header className="h-12 border-b flex items-center justify-between px-3 bg-gradient-to-r from-background via-background/80 to-background/60">
             <div className="flex items-center gap-2">
               <SidebarTrigger />
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowDashboard(true)}
+                className="gap-1"
+              >
+                <Home className="h-4 w-4" />
+                Dashboard
+              </Button>
               <div className="font-semibold tracking-tight text-sm select-none">
                 SkriptPanda<span style={{ color: "hsl(var(--brand-orange))" }}>.</span>
               </div>
@@ -160,6 +211,15 @@ const Index = () => {
           </footer>
         </SidebarInset>
       </div>
+
+      {/* AI Chat */}
+      <AIChat
+        tree={tree}
+        onTreeUpdate={handleTreeUpdate}
+        onFileOpen={handleOpenFile}
+        isOpen={chatOpen}
+        onToggle={() => setChatOpen(!chatOpen)}
+      />
 
       {/* Create Dialog */}
       <Dialog open={!!createState} onOpenChange={(o) => !o && setCreateState(null)}>
