@@ -146,7 +146,7 @@ const Index = () => {
     <SidebarProvider>
       {/* Accessible SEO H1 */}
       <h1 className="sr-only">SkriptPanda IDE - SkriptLang Editor</h1>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full relative">
         <AppSidebar
           tree={tree}
           onCreateFile={(id) => createIn(id, false)}
@@ -157,7 +157,13 @@ const Index = () => {
           onMove={(sourceId, targetId, position) => setTree((t) => moveNode(t, sourceId, targetId, position))}
           selectedId={activeId}
         />
-        <SidebarInset className={chatOpen ? "mr-80" : ""}>
+        <SidebarInset 
+          className="flex-1 transition-all duration-300"
+          style={{ 
+            width: chatOpen ? 'calc(100% - 320px)' : '100%',
+            maxWidth: chatOpen ? 'calc(100% - 320px)' : '100%'
+          }}
+        >
           {/* Top bar */}
           <header className="h-12 border-b flex items-center justify-between px-3 bg-gradient-to-r from-background via-background/80 to-background/60">
             <div className="flex items-center gap-2">
