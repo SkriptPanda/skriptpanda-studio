@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -190,6 +190,10 @@ Please check your API key and try again.`,
   return (
     <Dialog open={isOpen} onOpenChange={onToggle}>
       <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>AI Agent Chat</DialogTitle>
+          <DialogDescription>Chat with the AI Agent for SkriptLang development assistance</DialogDescription>
+        </DialogHeader>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center space-x-2">

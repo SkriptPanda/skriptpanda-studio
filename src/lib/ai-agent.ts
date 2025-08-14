@@ -530,7 +530,7 @@ on load:
         },
       });
 
-      const result = await model.generateContent("Say hello");
+      const result = await model.generateContent("Say hi nothing else");
       const response = await result.response;
       const text = response.text();
 
