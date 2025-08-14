@@ -26,7 +26,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { WorkspaceDashboard } from "@/components/workspace/WorkspaceDashboard";
-import { ChatPopup } from "@/components/chat/ChatPopup";
+import { NewAIChat } from "@/components/chat/NewAIChat";
 import { loadWorkspaces, switchWorkspace, updateWorkspaceTree } from "@/lib/workspace";
 import { WorkspaceManager } from "@/types/workspace";
 
@@ -428,13 +428,13 @@ const Index = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Chat Popup - Triggered by Ctrl+L */}
-      <ChatPopup
+      {/* AI Agent Chat Popup - Triggered by Ctrl+L */}
+      <NewAIChat
         tree={tree}
         onTreeUpdate={handleTreeUpdate}
         onFileOpen={handleOpenFile}
         isOpen={chatPopupOpen}
-        onClose={() => setChatPopupOpen(false)}
+        onToggle={() => setChatPopupOpen(prev => !prev)}
       />
     </SidebarProvider>
   );
