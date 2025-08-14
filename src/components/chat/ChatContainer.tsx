@@ -13,13 +13,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { ChatBar } from "@/components/chat/ChatBar";
 import { processAICommand } from "@/lib/ai-commands";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
-
-interface Message {
-  id: string;
-  content: string;
-  role: "user" | "assistant";
-  timestamp: Date;
-}
+import {
+  Message,
+  saveChatHistory,
+  loadChatHistory,
+  clearChatHistory,
+  formatMessagesForAI
+} from "@/lib/chat-storage";
 
 interface ChatContainerProps {
   tree: FileTree;
@@ -38,8 +38,12 @@ export const ChatContainer = ({
 }: ChatContainerProps) => {
   const { toast } = useToast();
   
-  // Independent state management for chat
-  const [messages, setMessages] = useState<Message[]>([]);
+  // Independent state management for chat with persistence
+  const [messages, setMessages] = useState<Message[]>(() => {
+    // Load chat history on component mount
+    const savedMessages = loadChatHistory();
+    return savedMessages.length > 0 ? savedMessages : [];
+  });
   
   const [isLoading, setIsLoading] = useState(false);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
@@ -54,6 +58,13 @@ export const ChatContainer = ({
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Auto-save messages to localStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveChatHistory(messages);
     }
   }, [messages]);
 
@@ -83,7 +94,15 @@ export const ChatContainer = ({
     setIsLoading(true);
 
     try {
-      const response = await processAICommand(text.trim(), tree, onTreeUpdate, onFileOpen, apiKey);
+      // Pass current messages as context to the AI
+      const response = await processAICommand(
+        text.trim(),
+        tree,
+        onTreeUpdate,
+        onFileOpen,
+        apiKey,
+        messages // Pass chat history for context
+      );
 
       console.log("🎯 AI Response received in ChatContainer:");
       console.log("📝 Response type:", typeof response);
@@ -132,6 +151,7 @@ export const ChatContainer = ({
 
   const clearMessages = () => {
     setMessages([]);
+    clearChatHistory(); // Also clear from localStorage
   };
 
   return (

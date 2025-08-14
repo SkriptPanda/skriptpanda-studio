@@ -13,13 +13,12 @@ import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { useToast } from "@/components/ui/use-toast";
 import { ChatBar } from "@/components/chat/ChatBar";
 import { processAICommand } from "@/lib/ai-commands";
-
-interface Message {
-  id: string;
-  content: string;
-  role: "user" | "assistant";
-  timestamp: Date;
-}
+import {
+  Message,
+  saveChatHistory,
+  loadChatHistory,
+  clearChatHistory
+} from "@/lib/chat-storage";
 
 interface AIChatProps {
   tree: FileTree;
@@ -31,14 +30,22 @@ interface AIChatProps {
 
 export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIChatProps) => {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      content: "Hello! I'm your SkriptLang assistant powered by Gemini AI. I can help you create folders, files, and write code. Try saying things like:\n\n• \"Create a folder called 'commands'\"\n• \"Create a file called 'teleport.sk' with basic teleport command\"\n• \"Write a simple join event script\"\n\nFirst, I'll need your Gemini API key to provide intelligent responses.",
-      role: "assistant",
-      timestamp: new Date()
+  const [messages, setMessages] = useState<Message[]>(() => {
+    // Load chat history on component mount
+    const savedMessages = loadChatHistory();
+    if (savedMessages.length > 0) {
+      return savedMessages;
     }
-  ]);
+    // Return welcome message if no saved history
+    return [
+      {
+        id: "welcome",
+        content: "Hello! I'm your SkriptLang assistant powered by Gemini AI. I can help you create folders, files, and write code. Try saying things like:\n\n• \"Create a folder called 'commands'\"\n• \"Create a file called 'teleport.sk' with basic teleport command\"\n• \"Write a simple join event script\"\n\nFirst, I'll need your Gemini API key to provide intelligent responses.",
+        role: "assistant",
+        timestamp: new Date()
+      }
+    ];
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState("");
@@ -48,6 +55,13 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Auto-save messages to localStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveChatHistory(messages);
     }
   }, [messages]);
 
@@ -70,7 +84,15 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
     setIsLoading(true);
 
     try {
-      const response = await processAICommand(text.trim(), tree, onTreeUpdate, onFileOpen, apiKey);
+      // Pass current messages as context to the AI
+      const response = await processAICommand(
+        text.trim(),
+        tree,
+        onTreeUpdate,
+        onFileOpen,
+        apiKey,
+        messages // Pass chat history for context
+      );
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         content: response,
@@ -150,6 +172,18 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
     }
   };
 
+  const clearMessages = () => {
+    setMessages([
+      {
+        id: "welcome",
+        content: "Hello! I'm your SkriptLang assistant powered by Gemini AI. I can help you create folders, files, and write code. Try saying things like:\n\n• \"Create a folder called 'commands'\"\n• \"Create a file called 'teleport.sk' with basic teleport command\"\n• \"Write a simple join event script\"\n\nFirst, I'll need your Gemini API key to provide intelligent responses.",
+        role: "assistant",
+        timestamp: new Date()
+      }
+    ]);
+    clearChatHistory(); // Also clear from localStorage
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -173,9 +207,19 @@ export const AIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: AIC
             </Button>
           )}
         </div>
-        <Button variant="ghost" size="sm" onClick={onToggle}>
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearMessages}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Clear
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onToggle}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Messages */}

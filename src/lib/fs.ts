@@ -164,6 +164,45 @@ export const DEFAULT_TREE: FileTree = createFolder("SkriptPanda", [
   createFolder("scripts", [
     createFile("example.sk", "# Example Skript file\n\n# Start writing your Skript here.\n"),
   ]),
+  createFolder("Greets", [
+    createFile("join-leave.sk", `# Join and Leave Messages
+# This script handles player join and leave messages
+
+on join:
+    # Send a welcome message to the joining player
+    send "&a&lWelcome to the server, %player%!" to player
+    send "&7Hope you enjoy your stay!" to player
+
+    # Broadcast join message to all players
+    broadcast "&8[&a+&8] &7%player% &ajoined the server"
+
+    # Optional: Play a sound effect
+    play sound "entity.player.levelup" with volume 0.5 and pitch 1.2 to player
+
+on quit:
+    # Broadcast leave message to all players
+    broadcast "&8[&c-&8] &7%player% &cleft the server"
+
+    # Optional: You can add custom leave reasons or effects here
+    # Example: if player has permission "vip":
+    #     broadcast "&6VIP player %player% has left!"
+
+# Optional: First join special message
+on first join:
+    wait 1 second
+    send "&6&l=== WELCOME TO THE SERVER ===" to player
+    send "&eThis is your first time joining!" to player
+    send "&eType /help for a list of commands" to player
+    send "&6&l=========================" to player
+
+    # Give starter items (optional)
+    give player 1 bread
+    give player 1 wooden sword
+
+    # Broadcast special first join message
+    broadcast "&6&lEveryone welcome &e%player% &6&lto the server for the first time!"
+`),
+  ]),
   createFile("README.md", "# SkriptPanda.\n\nWelcome to SkriptPanda IDE."),
 ]);
 

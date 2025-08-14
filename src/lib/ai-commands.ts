@@ -1,5 +1,14 @@
 import { FileTree, FileLeaf, FileNode, createFile, createFolder, addChild, updateFileContent, findNode, isFolder, isFile } from "@/lib/fs";
 import { callGeminiAPI, GeminiMessage } from "@/lib/gemini";
+import { Message, formatMessagesForAI } from "@/lib/chat-storage";
+
+// Helper function to find a node by name within a specific parent
+const findNodeByName = (tree: FileTree, name: string, parentId: string): FileNode | null => {
+  const parent = findNode(tree, parentId);
+  if (!parent || !isFolder(parent)) return null;
+
+  return parent.children.find(child => child.name === name) || null;
+};
 
 // Helper function to get file tree structure as text
 const getFileTreeStructure = (node: FileNode, depth = 0): string => {
@@ -21,8 +30,12 @@ const getAllFileContents = (node: FileNode, path = ""): string => {
 
   if (isFile(node)) {
     const fullPath = path ? `${path}/${node.name}` : node.name;
+    const content = node.content || "";
+    const contentPreview = content.length > 1000 ? content.substring(0, 1000) + "\n... (content truncated)" : content;
+
     result += `\n=== FILE: ${fullPath} ===\n`;
-    result += `Content:\n${node.content || "(empty file)"}\n`;
+    result += `Size: ${content.length} characters\n`;
+    result += `Content:\n${contentPreview || "(empty file)"}\n`;
     result += `=== END OF ${fullPath} ===\n\n`;
   } else if (isFolder(node)) {
     const currentPath = path ? `${path}/${node.name}` : node.name;
@@ -38,8 +51,10 @@ const getAllFileContents = (node: FileNode, path = ""): string => {
 const getProjectSummary = (tree: FileTree): string => {
   const structure = getFileTreeStructure(tree as FileNode);
   const contents = getAllFileContents(tree as FileNode);
+  const fileCount = countFiles(tree as FileNode);
+  const folderCount = countFolders(tree as FileNode);
 
-  return `
+  const summary = `
 PROJECT OVERVIEW:
 ================
 Structure:
@@ -48,10 +63,28 @@ ${structure}
 File Contents:
 ${contents}
 
-Total files: ${countFiles(tree as FileNode)}
-Total folders: ${countFolders(tree as FileNode)}
+Total files: ${fileCount}
+Total folders: ${folderCount}
 ================
 `;
+
+  // If the summary is too long, provide a condensed version
+  if (summary.length > 15000) {
+    return `
+PROJECT OVERVIEW:
+================
+Structure:
+${structure}
+
+Total files: ${fileCount}
+Total folders: ${folderCount}
+
+Note: Project contains many files. Full content available upon request.
+================
+`;
+  }
+
+  return summary;
 };
 
 // Helper functions to count files and folders
@@ -77,53 +110,78 @@ export const processAICommand = async (
   tree: FileTree,
   onTreeUpdate: (tree: FileTree) => void,
   onFileOpen: (file: any) => void,
-  apiKey: string
+  apiKey: string,
+  chatHistory: Message[] = []
 ): Promise<string> => {
-  // Get comprehensive project context for better AI understanding
-  const projectSummary = getProjectSummary(tree);
-  console.log("📁 Project context prepared, files:", countFiles(tree as FileNode));
+  // For debugging, let's use a minimal project summary to avoid token limits
+  const fileCount = countFiles(tree as FileNode);
+  const folderCount = countFolders(tree as FileNode);
+
+  const projectSummary = `
+PROJECT OVERVIEW:
+================
+Total files: ${fileCount}
+Total folders: ${folderCount}
+Current project structure available.
+================
+`;
+
+  console.log("📁 Project context prepared, files:", fileCount);
+  console.log("📝 Using minimal project summary to avoid token limits");
+
+  // Format chat history for context
+  const chatContext = formatMessagesForAI(chatHistory);
 
   const messages: GeminiMessage[] = [
     {
       role: "user",
       parts: [{
-        text: `You are SkriptPanda, a helpful SkriptLang assistant with complete access to the user's project.
+        text: `You are a helpful assistant for SkriptLang development.
 
-USER REQUEST: "${input}"
+${chatContext}
+
+User request: "${input}"
 
 ${projectSummary}
 
-CAPABILITIES:
-- Create files and folders directly
-- Read and analyze existing files
-- Modify existing files
-- Understand project structure and context
+Please help the user with their SkriptLang development request. If they want to create a file, provide the code in a skript code block. If they ask about existing files, describe what you find.
 
-INSTRUCTIONS:
-- If the user wants to create a file (like "create me a simple skript in example.sk"), create it with appropriate SkriptLang code
-- If the user asks about existing files, provide information about them
-- If the user wants to edit files, modify them as requested
-- Always be helpful and provide working SkriptLang code when creating files
-- Use proper SkriptLang syntax and include helpful comments
-- Format your responses using markdown for better readability
-- Use code blocks with \`\`\`skript for SkriptLang code
-- Use headings, lists, and formatting to make responses clear and organized
-
-For file creation requests, provide the code in a code block and I'll create the file automatically.`
+Consider the conversation history above to maintain context and provide relevant responses.`
       }]
     }
   ];
 
   try {
     console.log("🚀 Sending request to Gemini API...");
+    console.log("📝 Project summary length:", projectSummary.length);
+    console.log("📝 Input length:", input.length);
+    console.log("📝 Total message length:", messages[0].parts[0].text.length);
+
+    // First try a simple test to see if API is working
+    if (input.toLowerCase().includes("test api")) {
+      const testMessages: GeminiMessage[] = [
+        {
+          role: "user",
+          parts: [{ text: "Say hello and confirm you can respond." }]
+        }
+      ];
+      console.log("🧪 Running API test...");
+      const testResponse = await callGeminiAPI(testMessages, apiKey, false, false);
+      console.log("🧪 Test response:", testResponse);
+      return `API Test Result: ${testResponse}`;
+    }
+
     const response = await callGeminiAPI(messages, apiKey, true, false);
     console.log("✅ Received response from Gemini API");
     console.log("📝 Response length:", response.length);
     console.log("📝 Response content:", response.substring(0, 200) + "...");
 
-    // Check if the response contains code and suggests file creation
+    // Only auto-create files if the user explicitly requested file creation
+    const isFileCreationRequest = /\b(create|make|generate|write|add)\b.*\b(file|script|\.sk)\b/i.test(input) ||
+                                 /\b(new|create)\b.*\b(script|skript)\b/i.test(input);
+
     const codeMatch = response.match(/```(?:skript|sk)?\n([\s\S]*?)\n```/);
-    if (codeMatch) {
+    if (codeMatch && isFileCreationRequest) {
       const code = codeMatch[1];
       // Try to extract filename from the response or user input
       let fileName = extractFileNameFromResponse(response) || extractFileNameFromResponse(input);
@@ -133,13 +191,121 @@ For file creation requests, provide the code in a code block and I'll create the
         fileName = "example.sk";
       }
 
-      // Create the file
+      // Handle file creation with proper folder structure
+      let updatedTree = tree;
+      let targetParentId = tree.id;
+
+      // Check if filename includes a path (e.g., "scripts/example.sk")
+      if (fileName.includes('/')) {
+        const pathParts = fileName.split('/');
+        const actualFileName = pathParts.pop()!;
+
+        // Create folders if they don't exist
+        for (const folderName of pathParts) {
+          let existingFolder = findNodeByName(updatedTree, folderName, targetParentId);
+          if (!existingFolder) {
+            const newFolder = createFolder(folderName);
+            updatedTree = addChild(updatedTree, targetParentId, newFolder);
+            targetParentId = newFolder.id;
+            console.log("📁 Created folder:", folderName);
+          } else {
+            targetParentId = existingFolder.id;
+          }
+        }
+        fileName = actualFileName;
+      }
+
+      // Create the file in the appropriate folder
       const file = createFile(fileName, code);
-      const updatedTree = addChild(tree, tree.id, file);
+      updatedTree = addChild(updatedTree, targetParentId, file);
       onTreeUpdate(updatedTree);
       onFileOpen(file);
       console.log("📄 Auto-created file:", fileName);
-      return response + `\n\n✅ I've created the file "${fileName}" for you with this code!`;
+
+      // Generate a natural AI response about the file creation
+      const fileCreationMessages: GeminiMessage[] = [
+        {
+          role: "user",
+          parts: [{
+            text: `User requested: "${input}"
+
+I've created a file called "${fileName}" with the following code:
+
+\`\`\`skript
+${code}
+\`\`\`
+
+The file has been successfully created and opened in the editor. Please respond naturally to the user about creating this file and briefly explain what the code does.`
+          }]
+        }
+      ];
+
+      return await callGeminiAPI(fileCreationMessages, apiKey, true, false);
+    }
+
+    // Check for folder creation requests
+    const isFolderCreationRequest = /\b(create|make|add|new)\b.*\b(folder|directory)\b/i.test(input);
+
+    if (isFolderCreationRequest) {
+      // Extract folder name from input - try multiple patterns
+      let folderName = null;
+
+      // Pattern 1: "create folder greet" or "create a folder called greet"
+      const pattern1 = input.match(/(?:create|make|add|new)\s+(?:a\s+)?(?:folder|directory)\s+(?:called\s+|named\s+)?['""]?([^'""\s]+)['""]?/i);
+      if (pattern1) folderName = pattern1[1];
+
+      // Pattern 2: "create folder 'greet'" or "create folder "greet""
+      if (!folderName) {
+        const pattern2 = input.match(/(?:folder|directory)\s+['""]([^'""]+)['""]?/i);
+        if (pattern2) folderName = pattern2[1];
+      }
+
+      // Pattern 3: Just quoted text "greet"
+      if (!folderName) {
+        const pattern3 = input.match(/['""]([^'""]+)['""]/) || input.match(/\b([a-zA-Z][a-zA-Z0-9_-]*)\s*$/);
+        if (pattern3) folderName = pattern3[1];
+      }
+
+      if (folderName) {
+        // Create the folder
+        const newFolder = createFolder(folderName);
+        const updatedTree = addChild(tree, tree.id, newFolder);
+        onTreeUpdate(updatedTree);
+        console.log("📁 Auto-created folder:", folderName);
+
+        // Let the AI respond naturally about the folder creation
+        const folderCreationContext = `[SYSTEM: Folder "${folderName}" has been successfully created in the project.]`;
+
+        // Generate a natural AI response about the folder creation
+        const messages: GeminiMessage[] = [
+          {
+            role: "user",
+            parts: [{
+              text: `User requested: "${input}"
+
+${folderCreationContext}
+
+Please respond naturally to the user about creating the folder. Be conversational and helpful.`
+            }]
+          }
+        ];
+
+        return await callGeminiAPI(messages, apiKey, true, false);
+      } else {
+        // Let the AI respond naturally about needing clarification
+        const messages: GeminiMessage[] = [
+          {
+            role: "user",
+            parts: [{
+              text: `User requested: "${input}"
+
+The user wants to create a folder but I couldn't determine the folder name from their request. Please respond naturally asking them to clarify the folder name they want to create.`
+            }]
+          }
+        ];
+
+        return await callGeminiAPI(messages, apiKey, true, false);
+      }
     }
 
     // Ensure we always return something
