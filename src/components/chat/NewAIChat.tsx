@@ -32,46 +32,7 @@ export const NewAIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: 
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>(() => {
     const savedMessages = loadChatHistory();
-    if (savedMessages.length > 0) {
-      return savedMessages;
-    }
-    return [
-      {
-        id: "welcome",
-        content: `# Welcome to SkriptPanda AI Agent! 🤖
-
-I'm your intelligent assistant for SkriptLang development, powered by Gemini 2.5 Pro. I can help you with:
-
-## 🚀 **File & Folder Operations**
-- Create new folders and files
-- Edit existing files
-- Delete files and folders
-- Rename files and folders
-
-## 📝 **SkriptLang Development**
-- Write proper SkriptLang code with correct syntax
-- Research latest SkriptLang features using Google Search
-- Provide working code examples
-- Add helpful comments and documentation
-
-## 🔍 **Smart Features**
-- Read and understand your entire project structure
-- Analyze existing code for context
-- Use Google Search to research syntax and features
-- Maintain conversation context
-
-## 💡 **Example Commands**
-- "Create a folder called 'commands'"
-- "Create a teleport command script"
-- "Add a heal command to my existing script"
-- "Create a join event that gives players a welcome message"
-- "Research the latest SkriptLang join event syntax"
-
-First, I'll need your Gemini API key to get started. You can get one from [Google AI Studio](https://aistudio.google.com/app/apikey).`,
-        role: "assistant",
-        timestamp: new Date()
-      }
-    ];
+    return savedMessages || [];
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
@@ -222,48 +183,12 @@ Please check your API key and try again.`,
   };
 
   const handleClearChat = () => {
-    setMessages([
-      {
-        id: "welcome",
-        content: `# Welcome to SkriptPanda AI Agent! 🤖
-
-I'm your intelligent assistant for SkriptLang development, powered by Gemini 2.5 Pro. I can help you with:
-
-## 🚀 **File & Folder Operations**
-- Create new folders and files
-- Edit existing files
-- Delete files and folders
-- Rename files and folders
-
-## 📝 **SkriptLang Development**
-- Write proper SkriptLang code with correct syntax
-- Research latest SkriptLang features using Google Search
-- Provide working code examples
-- Add helpful comments and documentation
-
-## 🔍 **Smart Features**
-- Read and understand your entire project structure
-- Analyze existing code for context
-- Use Google Search to research syntax and features
-- Maintain conversation context
-
-## 💡 **Example Commands**
-- "Create a folder called 'commands'"
-- "Create a teleport command script"
-- "Add a heal command to my existing script"
-- "Create a join event that gives players a welcome message"
-- "Research the latest SkriptLang join event syntax"
-
-Ready to help you with your SkriptLang project!`,
-        role: "assistant",
-        timestamp: new Date()
-      }
-    ]);
+    setMessages([]);
     clearChatHistory();
   };
 
   return (
-    <div className={`fixed inset-y-0 right-0 w-96 bg-background border-l shadow-lg transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+    <div className={`fixed inset-y-0 right-0 w-96 bg-background border-l shadow-lg transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'} relative`}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center space-x-2">
@@ -346,6 +271,22 @@ Ready to help you with your SkriptLang project!`,
         </div>
       </ScrollArea>
 
+      {/* API Key Overlay */}
+      {!apiKey && (
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-card border rounded-lg p-6 max-w-sm mx-4 text-center">
+            <Key className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">API Key Required</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Please add your Gemini API key to start using the AI Agent.
+            </p>
+            <Button onClick={() => setShowApiKeyDialog(true)}>
+              Add API Key
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Separator />
 
       {/* Input */}
@@ -353,7 +294,7 @@ Ready to help you with your SkriptLang project!`,
         <ChatBar
           onSend={handleSend}
           disabled={isLoading || !apiKey}
-          placeholder={apiKey ? "Ask me anything about SkriptLang..." : "Enter your Gemini API key first"}
+          placeholder="Ask me anything about SkriptLang..."
         />
       </div>
 
