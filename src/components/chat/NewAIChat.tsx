@@ -37,13 +37,19 @@ export const NewAIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: 
   const [isLoading, setIsLoading] = useState(false);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState("");
-  const [apiKey, setApiKey] = useState<string | null>(() => getGeminiApiKey());
+  const [apiKey, setApiKey] = useState<string | null>(() => {
+    const key = getGeminiApiKey();
+    console.log("🔑 Loading API key from localStorage:", key ? "Found" : "Not found");
+    return key;
+  });
   const [aiAgent, setAiAgent] = useState<AIAgent | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Initialize AI Agent when API key is available
   useEffect(() => {
+    console.log("🔑 API key state changed:", apiKey ? "Has key" : "No key");
     if (apiKey) {
+      console.log("🤖 Initializing AI Agent...");
       const config: AIAgentConfig = {
         apiKey,
         useGoogleSearch: true,
@@ -51,6 +57,10 @@ export const NewAIChat = ({ tree, onTreeUpdate, onFileOpen, isOpen, onToggle }: 
         temperature: 0.7
       };
       setAiAgent(new AIAgent(config));
+      console.log("✅ AI Agent initialized");
+    } else {
+      console.log("❌ No API key, clearing AI Agent");
+      setAiAgent(null);
     }
   }, [apiKey]);
 
@@ -149,11 +159,13 @@ Please check your API key and try again.`,
   const handleApiKeySubmit = () => {
     if (!apiKeyInput.trim()) return;
 
+    console.log("🔑 Setting API key:", apiKeyInput.trim().substring(0, 10) + "...");
     setApiKey(apiKeyInput.trim());
     setGeminiApiKey(apiKeyInput.trim());
     setShowApiKeyDialog(false);
     setApiKeyInput("");
     
+    console.log("✅ API key set successfully");
     toast({
       title: "✅ API Key Set",
       description: "Your Gemini API key has been successfully configured!",
@@ -262,6 +274,8 @@ Please check your API key and try again.`,
               <h3 className="text-lg font-semibold mb-2">API Key Required</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Please add your Gemini API key to start using the AI Agent.
+                <br />
+                <span className="text-xs">Debug: API Key state is {apiKey ? "set" : "not set"}</span>
               </p>
               <Button onClick={() => setShowApiKeyDialog(true)}>
                 Add API Key
