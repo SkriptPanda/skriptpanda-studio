@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { X, Key, Bot, User, Loader2 } from "lucide-react";
 import { FileTree, FileLeaf } from "@/lib/fs";
-import { getGeminiApiKey, setGeminiApiKey, testGeminiApiKey } from "@/lib/gemini";
+import { getGeminiApiKey, setGeminiApiKey } from "@/lib/gemini";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { useToast } from "@/components/ui/use-toast";
 import { ChatBar } from "@/components/chat/ChatBar";
@@ -146,40 +146,18 @@ Please check your API key and try again.`,
     }
   };
 
-  const handleApiKeySubmit = async () => {
+  const handleApiKeySubmit = () => {
     if (!apiKeyInput.trim()) return;
 
-    setIsLoading(true);
-    try {
-      const isValid = await testGeminiApiKey(apiKeyInput.trim());
-      
-      if (isValid) {
-        setApiKey(apiKeyInput.trim());
-        setGeminiApiKey(apiKeyInput.trim());
-        setShowApiKeyDialog(false);
-        setApiKeyInput("");
-        
-        toast({
-          title: "✅ API Key Set",
-          description: "Your Gemini API key has been successfully configured!",
-        });
-      } else {
-        toast({
-          title: "❌ Invalid API Key",
-          description: "Please check your API key and try again.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error("❌ Error testing API key:", error);
-      toast({
-        title: "❌ Error",
-        description: "Failed to test API key. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    setApiKey(apiKeyInput.trim());
+    setGeminiApiKey(apiKeyInput.trim());
+    setShowApiKeyDialog(false);
+    setApiKeyInput("");
+    
+    toast({
+      title: "✅ API Key Set",
+      description: "Your Gemini API key has been successfully configured!",
+    });
   };
 
   const handleClearChat = () => {
@@ -312,6 +290,9 @@ Please check your API key and try again.`,
               <Key className="h-5 w-5" />
               <span>Enter Gemini API Key</span>
             </DialogTitle>
+            <DialogDescription>
+              Enter your Gemini API key to enable AI Agent functionality. Get your API key from Google AI Studio.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -340,16 +321,9 @@ Please check your API key and try again.`,
           <DialogFooter>
             <Button
               onClick={handleApiKeySubmit}
-              disabled={!apiKeyInput.trim() || isLoading}
+              disabled={!apiKeyInput.trim()}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Testing...
-                </>
-              ) : (
-                "Set API Key"
-              )}
+              Set API Key
             </Button>
           </DialogFooter>
         </DialogContent>
