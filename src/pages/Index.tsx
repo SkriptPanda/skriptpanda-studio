@@ -428,7 +428,7 @@ const Index = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* AI Agent Chat - Triggered by Ctrl+L */}
+      {/* AI Agent Chat Popup - Triggered by Ctrl+L */}
       <NewAIChat
         tree={tree}
         onTreeUpdate={handleTreeUpdate}

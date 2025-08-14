@@ -188,115 +188,117 @@ Please check your API key and try again.`,
   };
 
   return (
-    <div className={`fixed inset-y-0 right-0 w-96 bg-background border-l shadow-lg transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'} relative`}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center space-x-2">
-          <Bot className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">AI Agent</h2>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearChat}
-            disabled={isLoading}
-          >
-            Clear
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggle}
-            disabled={isLoading}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex space-x-3 ${
-                message.role === "user" ? "justify-end" : "justify-start"
-              }`}
+    <Dialog open={isOpen} onOpenChange={onToggle}>
+      <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center space-x-2">
+            <Bot className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">AI Agent</h2>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearChat}
+              disabled={isLoading}
             >
-              {message.role === "assistant" && (
+              Clear
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggle}
+              disabled={isLoading}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex space-x-3 ${
+                  message.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                {message.role === "assistant" && (
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      <Bot className="h-4 w-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                
+                <div
+                  className={`max-w-[80%] rounded-lg p-3 ${
+                    message.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                  }`}
+                >
+                  <MarkdownRenderer content={message.content} />
+                </div>
+
+                {message.role === "user" && (
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-secondary text-secondary-foreground">
+                      <User className="h-4 w-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+              </div>
+            ))}
+            
+            {isLoading && (
+              <div className="flex space-x-3 justify-start">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     <Bot className="h-4 w-4" />
                   </AvatarFallback>
                 </Avatar>
-              )}
-              
-              <div
-                className={`max-w-[80%] rounded-lg p-3 ${
-                  message.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
-                }`}
-              >
-                <MarkdownRenderer content={message.content} />
-              </div>
-
-              {message.role === "user" && (
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-secondary text-secondary-foreground">
-                    <User className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-              )}
-            </div>
-          ))}
-          
-          {isLoading && (
-            <div className="flex space-x-3 justify-start">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  <Bot className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="bg-muted rounded-lg p-3">
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Thinking...</span>
+                <div className="bg-muted rounded-lg p-3">
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm text-muted-foreground">Thinking...</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
-
-      {/* API Key Overlay */}
-      {!apiKey && (
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-card border rounded-lg p-6 max-w-sm mx-4 text-center">
-            <Key className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">API Key Required</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Please add your Gemini API key to start using the AI Agent.
-            </p>
-            <Button onClick={() => setShowApiKeyDialog(true)}>
-              Add API Key
-            </Button>
+            )}
           </div>
+        </ScrollArea>
+
+        {/* API Key Overlay */}
+        {!apiKey && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10">
+            <div className="bg-card border rounded-lg p-6 max-w-sm mx-4 text-center">
+              <Key className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">API Key Required</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Please add your Gemini API key to start using the AI Agent.
+              </p>
+              <Button onClick={() => setShowApiKeyDialog(true)}>
+                Add API Key
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <Separator />
+
+        {/* Input */}
+        <div className="p-4">
+          <ChatBar
+            onSend={handleSend}
+            disabled={isLoading || !apiKey}
+            placeholder="Ask me anything about SkriptLang..."
+          />
         </div>
-      )}
-
-      <Separator />
-
-      {/* Input */}
-      <div className="p-4">
-        <ChatBar
-          onSend={handleSend}
-          disabled={isLoading || !apiKey}
-          placeholder="Ask me anything about SkriptLang..."
-        />
-      </div>
+      </DialogContent>
 
       {/* API Key Dialog */}
       <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
@@ -348,6 +350,6 @@ Please check your API key and try again.`,
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Dialog>
   );
 };
