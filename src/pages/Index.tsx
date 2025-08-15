@@ -26,7 +26,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { WorkspaceDashboard } from "@/components/workspace/WorkspaceDashboard";
-import { ChatPopup } from "@/components/chat/ChatPopup";
 import { loadWorkspaces, switchWorkspace, updateWorkspaceTree } from "@/lib/workspace";
 import { WorkspaceManager } from "@/types/workspace";
 
@@ -53,7 +52,6 @@ const Index = () => {
   });
   const [mode, setMode] = useState<string>(() => localStorage.getItem("skriptpanda.theme") || "sp-dark");
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
-  const [chatPopupOpen, setChatPopupOpen] = useState(false);
 
   // Ensure theme is properly applied on mount and synchronized
   useEffect(() => {
@@ -111,20 +109,6 @@ const Index = () => {
     }
   }, [activeId, workspaceManager.activeWorkspaceId]);
 
-  // Keyboard shortcut for chat popup (Ctrl+L)
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.key.toLowerCase() === 'l') {
-        event.preventDefault();
-        event.stopPropagation();
-        setChatPopupOpen(prev => !prev);
-      }
-    };
-
-    // Use capture phase to intercept before Monaco Editor
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, []);
 
   const activeFile = useMemo(() => openTabs.find((t) => t.id === activeId) ?? null, [openTabs, activeId]);
 
@@ -301,9 +285,6 @@ const Index = () => {
               >
                 <LogOut className="h-4 w-4" />
               </Button>
-              <div className="text-xs text-muted-foreground ml-2">
-                Press <kbd className="px-1 py-0.5 text-xs bg-muted rounded">Ctrl+L</kbd> for AI Chat
-              </div>
             </div>
           </header>
 
@@ -428,14 +409,6 @@ const Index = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Chat Popup - Triggered by Ctrl+L */}
-      <ChatPopup
-        tree={tree}
-        onTreeUpdate={handleTreeUpdate}
-        onFileOpen={handleOpenFile}
-        isOpen={chatPopupOpen}
-        onClose={() => setChatPopupOpen(false)}
-      />
     </SidebarProvider>
   );
 };

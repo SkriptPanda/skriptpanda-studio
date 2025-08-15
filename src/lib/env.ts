@@ -9,11 +9,9 @@ export const ENV = {
   APP_VERSION: "1.0.0",
   
   // API endpoints (can be configured via environment variables)
-  GEMINI_API_BASE_URL: "https://generativelanguage.googleapis.com/v1beta",
   
   // Feature flags
   FEATURES: {
-    AI_CHAT: true,
     FILE_MANAGEMENT: true,
     THEME_SWITCHING: true,
     EARLY_ACCESS: true,
@@ -21,7 +19,6 @@ export const ENV = {
   
   // Storage keys
   STORAGE_KEYS: {
-    GEMINI_API_KEY: "gemini-api-key",
     THEME: "theme",
     EARLY_ACCESS_CODE: "early-access-code",
     USER_PREFERENCES: "user-preferences",
